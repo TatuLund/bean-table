@@ -1,6 +1,12 @@
-# Paper Slider
+# Bean Table
 
-Vaadin 14 Java integration of @polymer/paper-slider
+This is a simple Table component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out. This component does not support lazy loading of the data, thus it is purposed for the small data sets only. In other words this is designed for use cases where Grid is too heavy, overkill, etc.
+
+BeanTable's cells can be populated by text, html or components.
+
+Currently only minimal styling included, no scrolling, etc. provided.
+
+The component has css class name "bean-table" and custom css can be applied with it.
 
 ## Development instructions
 
@@ -25,6 +31,6 @@ mvn versions:set -DnewVersion=1.0.0 # You cannot publish snapshot versions
 mvn install -Pdirectory
 ```
 
-The package is created as `target/paper-slider-1.0.0.zip`
+The package is created as `target/beantable-1.0.0.zip`
 
 For more information or to upload the package, visit https://vaadin.com/directory/my-components?uploadNewComponent
