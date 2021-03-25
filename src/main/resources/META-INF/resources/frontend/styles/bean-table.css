@@ -1,0 +1,12 @@
+.bean-table thead {
+    font-weight: 700;
+    background: var(--lumo-contrast-5pct);
+}
+
+.bean-table td {
+    border: 1px solid var(--lumo-contrast-20pct)
+}
+
+.bean-table {
+    border-collapse: collapse;
+}
