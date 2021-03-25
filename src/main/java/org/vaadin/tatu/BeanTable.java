@@ -123,7 +123,6 @@ public class BeanTable<T> extends HtmlContainer
 
         public RowItem(String id, R item) {
             this.item = item;
-            getElement().setProperty("value", id);
             rowElement = new Element("tr");
             createCells();
         }
@@ -330,8 +329,7 @@ public class BeanTable<T> extends HtmlContainer
         dataProviderListenerRegistration = dataProvider
                 .addDataProviderListener(event -> {
                     if (event instanceof DataChangeEvent.DataRefreshEvent) {
-                        reset(false);
-                        // doRefreshItem(event);
+                         doRefreshItem(event);
                     } else {
                         reset(false);
                     }
@@ -339,11 +337,6 @@ public class BeanTable<T> extends HtmlContainer
     }
 
     private void doRefreshItem(DataChangeEvent<T> event) {
-        // This part of the refresh items works, but updateRow
-        // is not working
-        // for some reason direct manipulation of existing rows
-        // with Element API does
-        // not work, maybe this is a bug in Flow
         T otherItem = ((DataChangeEvent.DataRefreshEvent<T>) event).getItem();
         getRowItems()
                 .filter(rowItem -> Objects.equals(getItemId(rowItem.getItem()),
@@ -365,6 +358,7 @@ public class BeanTable<T> extends HtmlContainer
     private void reset(boolean refresh) {
         if (!refresh) {
             bodyElement.setText("");
+            rows = new ArrayList<>();
         }
         keyMapper.removeAll();
         getDataProvider().fetch(new Query<>()).map(this::createRow)
@@ -426,7 +420,7 @@ public class BeanTable<T> extends HtmlContainer
      * 
      * @param htmlAllowed A boolean value.
      */
-    public void setHthmlAllowed(boolean htmlAllowed) {
+    public void setHtmlAllowed(boolean htmlAllowed) {
         this.htmlAllowed = htmlAllowed;
     }
 }
