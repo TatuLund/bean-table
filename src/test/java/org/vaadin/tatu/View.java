@@ -26,7 +26,15 @@ public class View extends VerticalLayout {
         table.setHtmlAllowed(true);
         table.addColumn("year", MonthlyExpense::getYear);
         table.addColumn("month", expense -> "<i>" + expense.getMonth() + "</i>");
-        table.addColumn("expense", MonthlyExpense::getExpenses);
+        table.addColumn("expenses");
+//        table.addComponentColumn("expense", expense -> {
+//            NumberField field = new NumberField();
+//            field.setValue(expense.getExpenses());
+//            field.addValueChangeListener(event -> {
+//                expense.setExpenses(event.getValue());
+//            });
+//            return field;
+//        });
         table.addComponentColumn(null, expense -> {
            Button edit = new Button("edit");
            edit.addClickListener(event -> {

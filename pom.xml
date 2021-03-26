@@ -3,7 +3,7 @@
 
     <groupId>org.vaadin.tatu</groupId>
     <artifactId>beantable</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>BeanTable</name>
     <description>Integration of paper-slider for Vaadin platform</description>
 

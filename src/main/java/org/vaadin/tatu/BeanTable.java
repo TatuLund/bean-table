@@ -306,7 +306,7 @@ public class BeanTable<T> extends HtmlContainer
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
         columns.forEach(column -> {
-            Element cell = new Element("td");
+            Element cell = new Element("th");
             if (column.getHeader() != null) {
                 cell.setText(column.getHeader());
             }
