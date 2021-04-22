@@ -10,3 +10,14 @@
 .bean-table {
     border-collapse: collapse;
 }
+
+.bean-table-paging {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+}
+
+.bean-table-page {
+	flex-grow: 1;
+	text-align: center;
+}

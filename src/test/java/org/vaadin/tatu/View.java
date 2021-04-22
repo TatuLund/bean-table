@@ -24,8 +24,8 @@ public class View extends VerticalLayout {
         setSizeFull();
         BeanTable<MonthlyExpense> table = new BeanTable<>(MonthlyExpense.class,false);
         table.setHtmlAllowed(true);
-        table.addColumn("year", MonthlyExpense::getYear);
-        table.addColumn("month", expense -> "<i>" + expense.getMonth() + "</i>");
+        table.addColumn("Year", MonthlyExpense::getYear);
+        table.addColumn("Month", expense -> "<i>" + expense.getMonth() + "</i>");
         table.addColumn("expenses");
 //        table.addComponentColumn("expense", expense -> {
 //            NumberField field = new NumberField();
@@ -51,7 +51,7 @@ public class View extends VerticalLayout {
         Button plus = new Button("+");
         Button minus = new Button("-");
         dp = (ListDataProvider<MonthlyExpense>) table.getDataProvider();
-        dp.setFilter(expense -> expense.getYear() == year);
+//        dp.setFilter(expense -> expense.getYear() == year);
         plus.addClickListener(event -> {
             year++;
             dp.setFilter(expense -> expense.getYear() == year);
