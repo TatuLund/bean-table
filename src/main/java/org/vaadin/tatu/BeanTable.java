@@ -10,7 +10,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.Html;
-import com.vaadin.flow.component.HtmlContainer;
+import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -55,7 +55,7 @@ import com.vaadin.flow.shared.Registration;
 
 @CssImport("./styles/bean-table.css")
 @Tag("table")
-public class BeanTable<T> extends HtmlContainer
+public class BeanTable<T> extends HtmlComponent
         implements HasDataProvider<T>, HasSize {
 
     private final KeyMapper<T> keyMapper = new KeyMapper<>(this::getItemId);
@@ -453,7 +453,7 @@ public class BeanTable<T> extends HtmlContainer
     @Override
     public void setDataProvider(DataProvider<T, ?> dataProvider) {
         this.dataProvider = dataProvider;
-        reset(true);
+        reset(false);
         setupDataProviderListener(dataProvider);
     }
 

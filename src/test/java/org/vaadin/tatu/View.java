@@ -46,12 +46,12 @@ public class View extends VerticalLayout {
            return edit;
         });
 //        table.setColumns("year","month","expenses");
-        data = getData();
+        data = getData(25);
         table.setItems(data);
         Button plus = new Button("+");
         Button minus = new Button("-");
         dp = (ListDataProvider<MonthlyExpense>) table.getDataProvider();
-//        dp.setFilter(expense -> expense.getYear() == year);
+        dp.setFilter(expense -> expense.getYear() == year);
         plus.addClickListener(event -> {
             year++;
             dp.setFilter(expense -> expense.getYear() == year);
@@ -61,7 +61,12 @@ public class View extends VerticalLayout {
             dp.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
-        add(plus,minus,table);        
+        Button newData = new Button("new");
+        newData.addClickListener(event -> {
+            data = getData(1);
+            table.setItems(data);
+        });
+        add(plus,minus,table,newData);        
     }
 
     private HorizontalLayout createForm() {
@@ -97,10 +102,10 @@ public class View extends VerticalLayout {
         expenseField.setValue(expense.getExpenses());
     }
 
-    public List<MonthlyExpense> getData() {
+    public List<MonthlyExpense> getData(int years) {
         String[] monthNames = new java.text.DateFormatSymbols().getMonths();
         List<MonthlyExpense> data = new ArrayList<>();
-        for (int year = 2000; year < 2020; year++) {
+        for (int year = 2000; year < (2000+years); year++) {
             for (int month = 0; month < 12; month++) {
                 data.add(new MonthlyExpense(monthNames[month], year,
                         getExpenses()));
