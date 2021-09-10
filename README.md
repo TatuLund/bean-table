@@ -8,6 +8,21 @@ Currently only minimal styling included, no scrolling, etc. provided.
 
 The component has css class name "bean-table" and custom css can be applied with it.
 
+## Release notes
+
+### 1.2.0
+- Added BeanTable#setClassNameProvider and Column#setClassNameProvider
+- Added support for Column setter chaining
+
+### 1.1.1
+- Fix issue with setItems(..) not clearing old items
+
+### 1.1.0
+- Add paging support to make BeanTable usable for lazy data providers
+
+### 1.0.0 
+- First release
+
 ## Development instructions
 
 JavaScript modules can either be published as an NPM package or be kept as local 

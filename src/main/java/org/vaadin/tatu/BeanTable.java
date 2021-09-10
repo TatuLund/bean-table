@@ -76,7 +76,36 @@ public class BeanTable<T> extends HtmlComponent
 
     private final ArrayList<QuerySortOrder> backEndSorting = new ArrayList<>();
     private int dataProviderSize = -1;
+    private StringProvider<T> classNameProvider;
 
+    @FunctionalInterface
+    public interface StringProvider<T> extends ValueProvider<T, String> {
+
+        /**
+         * Gets a caption for the {@code item}.
+         *
+         * @param item
+         *            the item to get caption for
+         * @return the caption of the item, not {@code null}
+         */
+        @Override
+        String apply(T item);
+    }
+    
+    @FunctionalInterface
+    public interface ComponentProvider<T> extends ValueProvider<T, Component> {
+
+        /**
+         * Gets a caption for the {@code item}.
+         *
+         * @param item
+         *            the item to get caption for
+         * @return the caption of the item, not {@code null}
+         */
+        @Override
+        Component apply(T item);
+    }
+    
     /**
      * Configuration class for the Columns.
      *
@@ -86,7 +115,8 @@ public class BeanTable<T> extends HtmlComponent
     public class Column<R> {
         String header;
         ValueProvider<T, ?> valueProvider;
-        ValueProvider<T, Component> componentProvider;
+        ComponentProvider<T> componentProvider;
+        private StringProvider<T> classNameProvider;
 
         /**
          * Constructor with header and value provider
@@ -107,21 +137,51 @@ public class BeanTable<T> extends HtmlComponent
         public Column() {
         }
 
-        public void setHeader(String header) {
+        /**
+         * Set column header
+         * 
+         * @param header String for header
+         * @return Column for chaining
+         */
+        public Column<R> setHeader(String header) {
             this.header = header;
+            return this;
         }
 
-        public void setComponentProvider(
-                ValueProvider<T, Component> componentProvider) {
+        /**
+         * Set component provider function for the column,
+         * 
+         * @param componentProvider ColumnProvider Lambda callback bean instance to Column.
+         * @return Column for chaining
+         */
+        public Column<R> setComponentProvider(
+                ComponentProvider<T> componentProvider) {
             this.componentProvider = componentProvider;
+            return this;
+        }
+
+        public ComponentProvider<T> getComponentProvider() {
+            return componentProvider;
         }
 
         public ValueProvider<T, ?> getValueProvider() {
             return valueProvider;
         }
 
-        public ValueProvider<T, Component> getComponentProvider() {
-            return componentProvider;
+        /**
+         * Set class name provider for a table column, i.e. cells in the column.
+         * 
+         * @param classNameProvider StringProvider Lambda callback bean instance to String.
+         * @return Column for chaining
+         */
+        public Column<R> setClassNameProvider(
+                StringProvider<T> classNameProvider) {
+            this.classNameProvider = classNameProvider;
+            return this;
+        }
+
+        public StringProvider<T> getClassNameProvider() {
+            return classNameProvider;
         }
 
         public String getHeader() {
@@ -143,6 +203,12 @@ public class BeanTable<T> extends HtmlComponent
         public RowItem(String id, R item) {
             this.item = item;
             rowElement = new Element("tr");
+            if (getClassNameProvider() != null) {
+                String className = getClassNameProvider().apply((T) item);
+                if (className != null && !className.isEmpty()) {
+                    rowElement.getClassList().add(className);
+                }
+            }
             createCells();
         }
 
@@ -160,6 +226,12 @@ public class BeanTable<T> extends HtmlComponent
                     component = column.getComponentProvider().apply((T) item);
                 } else {
                     value = column.getValueProvider().apply((T) item);
+                }
+                if (column.getClassNameProvider() != null) {
+                    String className = column.getClassNameProvider().apply((T) item);
+                    if (className != null && !className.isEmpty()) {
+                        cell.getClassList().add(className);
+                    }
                 }
                 if (value == null)
                     value = "";
@@ -195,7 +267,7 @@ public class BeanTable<T> extends HtmlComponent
     /**
      * The default constructor. This creates a BeanTable without further
      * configuration. Use {@link #addColumn(String,ValueProvider)}
-     * {@link #addComponentColumn(String,ValueProvider)} to configure columns.
+     * {@link #addComponentColumn(String,ComponentProvider)} to configure columns.
      */
     public BeanTable() {
         setClassName("bean-table");
@@ -213,7 +285,7 @@ public class BeanTable<T> extends HtmlComponent
      * constructor enables paging controls in the footer row. Also this creates
      * a BeanTable without further configuration. Use
      * {@link #addColumn(String,ValueProvider)}
-     * {@link #addComponentColumn(String,ValueProvider)} to configure columns.
+     * {@link #addComponentColumn(String,ComponentProvider)} to configure columns.
      * 
      * @param pageLength Size of the page
      */
@@ -370,7 +442,7 @@ public class BeanTable<T> extends HtmlComponent
      * @return A column
      */
     public Column<T> addComponentColumn(String header,
-            ValueProvider<T, Component> componentProvider) {
+            ComponentProvider<T> componentProvider) {
         Column<T> column = new Column<>();
         column.setHeader(header);
         column.setComponentProvider(componentProvider);
@@ -568,4 +640,19 @@ public class BeanTable<T> extends HtmlComponent
     public void setHtmlAllowed(boolean htmlAllowed) {
         this.htmlAllowed = htmlAllowed;
     }
+
+    /**
+     * Set class name provider for a table row.
+     * 
+     * @param classNameProvider StringProvider Lambda callback bean instance to String.
+     */
+    public void setClassNameProvider(
+            StringProvider<T> classNameProvider) {
+        this.classNameProvider = classNameProvider;
+    }
+
+    public StringProvider<T> getClassNameProvider() {
+        return classNameProvider;
+    }
+
 }
