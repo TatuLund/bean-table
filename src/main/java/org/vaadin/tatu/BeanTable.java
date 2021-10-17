@@ -3,31 +3,47 @@ package org.vaadin.tatu;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.data.binder.BeanPropertySet;
-import com.vaadin.flow.data.binder.HasDataProvider;
 import com.vaadin.flow.data.binder.PropertyDefinition;
 import com.vaadin.flow.data.binder.PropertySet;
+import com.vaadin.flow.data.provider.BackEndDataProvider;
 import com.vaadin.flow.data.provider.DataChangeEvent;
 import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.provider.DataProviderWrapper;
+import com.vaadin.flow.data.provider.DataViewUtils;
+import com.vaadin.flow.data.provider.HasDataView;
+import com.vaadin.flow.data.provider.HasLazyDataView;
+import com.vaadin.flow.data.provider.HasListDataView;
+import com.vaadin.flow.data.provider.IdentifierProvider;
+import com.vaadin.flow.data.provider.InMemoryDataProvider;
+import com.vaadin.flow.data.provider.ItemCountChangeEvent;
 import com.vaadin.flow.data.provider.KeyMapper;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.SerializableComparator;
+import com.vaadin.flow.function.SerializableConsumer;
+import com.vaadin.flow.function.SerializablePredicate;
 import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.shared.Registration;
 
@@ -56,11 +72,16 @@ import com.vaadin.flow.shared.Registration;
 @CssImport("./styles/bean-table.css")
 @Tag("table")
 public class BeanTable<T> extends HtmlComponent
-        implements HasDataProvider<T>, HasSize {
+        implements HasListDataView<T, BeanTableListDataView<T>>, 
+        HasDataView<T, Void, BeanTableDataView<T>>,
+        HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasSize {
 
     private final KeyMapper<T> keyMapper = new KeyMapper<>(this::getItemId);
-    private DataProvider<T, ?> dataProvider = DataProvider.ofItems();
-    private Registration dataProviderListenerRegistration;
+    private final AtomicReference<DataProvider<T, ?>> dataProvider = new AtomicReference<>(
+            DataProvider.ofItems());
+    private int lastNotifiedDataSize = -1;
+    private volatile int lastFetchedDataSize = -1;
+    private SerializableConsumer<UI> sizeRequest;    private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
     private List<RowItem<T>> rows = new ArrayList<>();
     private Element headerElement;
@@ -77,6 +98,7 @@ public class BeanTable<T> extends HtmlComponent
     private final ArrayList<QuerySortOrder> backEndSorting = new ArrayList<>();
     private int dataProviderSize = -1;
     private StringProvider<T> classNameProvider;
+    private BeanTableLazyDataView lazyDataView;
 
     @FunctionalInterface
     public interface StringProvider<T> extends ValueProvider<T, String> {
@@ -490,25 +512,25 @@ public class BeanTable<T> extends HtmlComponent
             first.addClickListener(event -> {
                 if (currentPage != 0) {
                     currentPage = 0;
-                    dataProvider.refreshAll();
+                    getDataProvider().refreshAll();
                 }
             });
             next.addClickListener(event -> {
                 if (currentPage < lastPage) {
                     currentPage++;
-                    dataProvider.refreshAll();
+                    getDataProvider().refreshAll();
                 }
             });
             previous.addClickListener(event -> {
                 if (currentPage > 0) {
                     currentPage--;
-                    dataProvider.refreshAll();
+                    getDataProvider().refreshAll();
                 }
             });
             last.addClickListener(event -> {
                 if (currentPage != lastPage) {
                     currentPage = lastPage;
-                    dataProvider.refreshAll();
+                    getDataProvider().refreshAll();
                 }
             });
             Div div = new Div();
@@ -522,10 +544,17 @@ public class BeanTable<T> extends HtmlComponent
         }
     }
 
-    @Override
+    @Deprecated
     public void setDataProvider(DataProvider<T, ?> dataProvider) {
-        this.dataProvider = dataProvider;
-        reset(false);
+        this.dataProvider.set(dataProvider);
+        DataViewUtils.removeComponentFilterAndSortComparator(this);
+        int estimate = -1;
+        if (getDataProvider() instanceof BackEndDataProvider) {
+            estimate = getLazyDataView().getItemCountEstimate();
+            if (estimate < 0) {
+                reset(false);
+            }
+        } 
         setupDataProviderListener(dataProvider);
     }
 
@@ -562,7 +591,7 @@ public class BeanTable<T> extends HtmlComponent
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
-    private void reset(boolean refresh) {
+    void reset(boolean refresh) {
         if (!refresh) {
             bodyElement.setText("");
             rows = new ArrayList<>();
@@ -572,23 +601,52 @@ public class BeanTable<T> extends HtmlComponent
         if (pageLength < 0) {
             query = new Query();
         } else {
-            dataProviderSize = dataProvider.size(new Query(filter));
+            int estimate = -1;
+            if (getDataProvider() instanceof BackEndDataProvider) {
+                estimate = getLazyDataView().getItemCountEstimate();
+            }
+            synchronized (dataProvider) {
+                dataProviderSize = estimate < 0 ? getDataProvider().size(new Query(filter)) : estimate;
+            }
             updateFooter();
             int offset = pageLength * currentPage;
             query = new Query(offset, pageLength, backEndSorting,
                     inMemorySorting, filter);
         }
-        getDataProvider().fetch(query).map(row -> createRow((T) row))
-                .forEach(rowItem -> addRow((BeanTable<T>.RowItem<T>) rowItem));
+        synchronized (dataProvider) {
+            final AtomicInteger itemCounter = new AtomicInteger(0);
+            getDataProvider().fetch(query).map(row -> createRow((T) row))
+                .forEach(rowItem -> {
+                    addRow((BeanTable<T>.RowItem<T>) rowItem);
+                    itemCounter.incrementAndGet();
+                });
+                lastFetchedDataSize = itemCounter.get();
+                if (sizeRequest == null) {
+                    sizeRequest = ui -> {
+                        fireSizeEvent();
+                        sizeRequest = null;
+                    };
+                    // Size event is fired before client response so as to avoid
+                    // multiple size change events during server round trips
+                    runBeforeClientResponse(sizeRequest);
+                }        
+        }
     }
 
+    protected T fetchItem(int index) {
+        Query query = new Query(index, 1, backEndSorting,
+                inMemorySorting, filter);
+        Optional<T> result = getDataProvider().fetch(query).findFirst();
+        return result.isPresent() ? result.get() : null;
+    }
+ 
     /**
      * Return the currently used data provider.
      * 
      * @return A data provider
      */
     public DataProvider<T, ?> getDataProvider() {
-        return dataProvider;
+        return dataProvider.get();
     }
 
     private Object getItemId(T item) {
@@ -653,6 +711,102 @@ public class BeanTable<T> extends HtmlComponent
 
     public StringProvider<T> getClassNameProvider() {
         return classNameProvider;
+    }
+
+
+    @Override
+    public BeanTableDataView<T> getGenericDataView() {
+        return new BeanTableDataView<>(this::getDataProvider, this,
+                this::identifierProviderChanged);
+    }
+
+    @Override
+    public BeanTableDataView<T> setItems(
+            DataProvider<T, Void> dataProvider) {
+        setDataProvider(dataProvider);
+        return getGenericDataView();
+    }
+
+    @Override
+    public BeanTableDataView<T> setItems(
+            InMemoryDataProvider<T> inMemoryDataProvider) {
+        DataProvider<T, Void> convertedDataProvider = new DataProviderWrapper<T, Void, SerializablePredicate<T>>(
+                inMemoryDataProvider) {
+            @Override
+            protected SerializablePredicate<T> getFilter(Query<T, Void> query) {
+                // Just ignore the query filter (Void) and apply the
+                // predicate only
+                return Optional.ofNullable(inMemoryDataProvider.getFilter())
+                        .orElse(item -> true);
+            }
+        };
+        return setItems(convertedDataProvider);
+    }
+
+    @Override
+    public BeanTableListDataView<T> getListDataView() {
+        return new BeanTableListDataView<>(this::getDataProvider, this,
+                this::identifierProviderChanged, (filter, sorting) -> reset(true));
+    }
+
+    @Override
+    public BeanTableListDataView<T> setItems(
+            ListDataProvider<T> dataProvider) {
+        setDataProvider(dataProvider);
+        return getListDataView();
+    }
+
+    public void setItems(Stream<T> streamOfItems) {
+        setItems(DataProvider.fromStream(streamOfItems));
+    }
+
+    @SuppressWarnings("unchecked")
+    private IdentifierProvider<T> getIdentifierProvider() {
+        IdentifierProvider<T> identifierProviderObject = ComponentUtil
+                .getData(this, IdentifierProvider.class);
+        if (identifierProviderObject == null) {
+            DataProvider<T, ?> dataProvider = getDataProvider();
+            if (dataProvider != null) {
+                return dataProvider::getId;
+            } else {
+                return IdentifierProvider.identity();
+            }
+        } else {
+            return identifierProviderObject;
+        }
+    }
+
+    private void identifierProviderChanged(
+            IdentifierProvider<T> identifierProvider) {
+        keyMapper.setIdentifierGetter(identifierProvider);
+    }
+
+    private void runBeforeClientResponse(SerializableConsumer<UI> command) {
+        getElement().getNode().runWhenAttached(ui -> ui
+                .beforeClientResponse(this, context -> command.accept(ui)));
+    }
+
+    private void fireSizeEvent() {
+        final int newSize = lastFetchedDataSize;
+        if (lastNotifiedDataSize != newSize) {
+            lastNotifiedDataSize = newSize;
+            fireEvent(new ItemCountChangeEvent<>(this, newSize, false));
+        }
+    }
+
+    @Override
+    public BeanTableLazyDataView<T> setItems(
+            BackEndDataProvider<T, Void> dataProvider) {
+        setDataProvider(dataProvider);
+        return getLazyDataView();
+    }
+
+    @Override
+    public BeanTableLazyDataView<T> getLazyDataView() {
+        if (lazyDataView == null) {
+            lazyDataView = new BeanTableLazyDataView<>(this::getDataProvider, this);
+        }
+        return lazyDataView;
     }
 
 }

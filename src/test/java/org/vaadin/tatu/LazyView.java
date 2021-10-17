@@ -1,11 +1,13 @@
 package org.vaadin.tatu;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.data.provider.ConfigurableFilterDataProviderWrapper;
-import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 
 @Route("lazy")
@@ -15,32 +17,45 @@ public class LazyView extends VerticalLayout {
         setSizeFull();
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
-        DataProvider<Person, ?> dataProvider = DataProvider.fromCallbacks(
-                query -> personService
-                        .fetch(query.getOffset(), query.getLimit()).stream(),
-                query -> personService.count());
         table.setColumns("firstName","lastName","age","phoneNumber","maritalStatus");
         table.addColumn("Postal Code",person -> person.getAddress() == null ? "" : person.getAddress().getPostalCode());
         table.addColumn("City",person -> person.getAddress() == null ? "" : person.getAddress().getCity());
-        table.setDataProvider(dataProvider);
+        
+        BeanTableLazyDataView<Person> dataView = table.setItems(query -> personService
+                        .fetch(query.getOffset(), query.getLimit(), null).stream(),query -> personService.count(null));
         table.setWidthFull();
-        add(table);
+        TextField filter = new TextField("Filter");
+        filter.setValueChangeMode(ValueChangeMode.LAZY);
+        filter.addValueChangeListener(event -> {
+            table.setItems(query -> personService
+                    .fetch(query.getOffset(), query.getLimit(), event.getValue()).stream(),query -> personService.count(event.getValue()));
+        });
+        dataView.addItemCountChangeListener(event -> {
+            Notification.show("Count: "+event.getItemCount());
+        });
+        add(filter,table);
     }
 
     public class PersonService {
         private PersonData personData = new PersonData();
 
-        public List<Person> fetch(int offset, int limit) {
+        public List<Person> fetch(int offset, int limit, String filter) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
             }
             int end = offset + limit;
-            int size = personData.getPersons().size();
+            int size = count(filter);
             if (size <= end) {
                 end = size;
             }
-            return personData.getPersons().subList(offset, end);
+            if (filter != null && !filter.isEmpty()) {
+                return personData.getPersons().stream().filter(item -> {
+                    return item.toString().toLowerCase().contains(filter.toLowerCase());
+                }).collect(Collectors.toList()).subList(offset, end);
+            } else {    
+                return personData.getPersons().subList(offset, end);
+            }
         }
 
         public Stream<Person> fetchPage(int page, int pageSize) {
@@ -48,12 +63,18 @@ public class LazyView extends VerticalLayout {
                     .limit(pageSize);
         }
 
-        public int count() {
+        public int count(String filter) {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
             }
-            return personData.getPersons().size();
+            if (filter != null && !filter.isEmpty()) {
+                return personData.getPersons().stream().filter(item -> {
+                    return item.toString().toLowerCase().contains(filter.toLowerCase());
+                }).collect(Collectors.toList()).size();
+            } else {    
+                return personData.getPersons().size();
+            }
         }
 
         public List<Person> fetchAll() {

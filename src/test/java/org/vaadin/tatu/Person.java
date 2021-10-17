@@ -145,7 +145,8 @@ public class Person implements Cloneable {
 
     @Override
     public String toString() {
-        return String.format("%s, %s", firstName, lastName);
+        String string = String.format("%s, %s, %s, %s, %s, %s", firstName, lastName, age, address.toString(), phoneNumber, maritalStatus.toString());
+        return string;
     }
 
     @Override
