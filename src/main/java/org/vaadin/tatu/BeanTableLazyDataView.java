@@ -27,38 +27,18 @@ public class BeanTableLazyDataView<T> extends AbstractDataView<T> implements Laz
         table = component;
     }
 
-    /**
-     * @inheritDoc
-     *             <p>
-     *             Calling this method will clear any previously set count
-     *             callback with the
-     *             {@link #setItemCountCallback(CallbackDataProvider.CountCallback)}
-     *             method.
-     */
     @Override
     public void setItemCountFromDataProvider() {
         itemCountEstimate = -1;
         table.reset(false);
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Calling this method will clear any previously set count callback
-     * {@link #setItemCountCallback(CallbackDataProvider.CountCallback)}.
-     */
     @Override
     public void setItemCountEstimate(int itemCountEstimate) {
         this.itemCountEstimate = itemCountEstimate;
         table.reset(false);
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Calling this method will clear any previously set count callback
-     * {@link #setItemCountCallback(CallbackDataProvider.CountCallback)}.
-     */
     @Override
     public void setItemCountUnknown() {
         itemCountEstimate = -1;

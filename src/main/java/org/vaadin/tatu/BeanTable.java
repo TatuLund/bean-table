@@ -16,6 +16,7 @@ import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -139,6 +140,7 @@ public class BeanTable<T> extends HtmlComponent
         ValueProvider<T, ?> valueProvider;
         ComponentProvider<T> componentProvider;
         private StringProvider<T> classNameProvider;
+        private Component headerComponent;
 
         /**
          * Constructor with header and value provider
@@ -160,13 +162,26 @@ public class BeanTable<T> extends HtmlComponent
         }
 
         /**
-         * Set column header
+         * Set column header as String
          * 
          * @param header String for header
          * @return Column for chaining
          */
         public Column<R> setHeader(String header) {
             this.header = header;
+            updateHeader();
+            return this;
+        }
+
+        /**
+         * Set column header as a Component
+         * 
+         * @param header Component used for header
+         * @return Column for chaining
+         */
+        public Column<R> setHeader(Component header) {
+            this.headerComponent = header;
+            updateHeader();
             return this;
         }
 
@@ -206,8 +221,14 @@ public class BeanTable<T> extends HtmlComponent
             return classNameProvider;
         }
 
-        public String getHeader() {
-            return header;
+        public Component getHeader() {
+            if (headerComponent != null) {
+                return headerComponent;
+            }
+            if (header != null) {
+                return new Text(header);
+            }
+            return null;
         }
     }
 
@@ -466,7 +487,6 @@ public class BeanTable<T> extends HtmlComponent
     public Column<T> addComponentColumn(String header,
             ComponentProvider<T> componentProvider) {
         Column<T> column = new Column<>();
-        column.setHeader(header);
         column.setComponentProvider(componentProvider);
         columns.add(column);
         updateHeader();
@@ -479,7 +499,7 @@ public class BeanTable<T> extends HtmlComponent
         columns.forEach(column -> {
             Element cell = new Element("th");
             if (column.getHeader() != null) {
-                cell.setText(column.getHeader());
+                cell.appendChild(column.getHeader().getElement());
             }
             rowElement.appendChild(cell);
         });

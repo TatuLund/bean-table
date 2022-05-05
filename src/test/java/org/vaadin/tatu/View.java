@@ -3,6 +3,7 @@ package org.vaadin.tatu;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -10,6 +11,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
@@ -53,7 +55,7 @@ public class View extends VerticalLayout {
                 dialog.open();
             });
             return edit;
-        });
+        }).setHeader(new Html("<span style='color: blue'>Edit</span>"));
         // table.setColumns("year","month","expenses");
         data = getData(25);
         dataView = table.setItems(data);
