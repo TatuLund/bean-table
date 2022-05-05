@@ -574,7 +574,9 @@ public class BeanTable<T> extends HtmlComponent
             if (estimate < 0) {
                 reset(false);
             }
-        } 
+        } else {
+            reset(false);            
+        }
         setupDataProviderListener(dataProvider);
     }
 

@@ -28,14 +28,13 @@ public class View extends VerticalLayout {
 
     public View() {
         setSizeFull();
-        BeanTable<MonthlyExpense> table = new BeanTable<>(MonthlyExpense.class,
-                false);
+        BeanTable<MonthlyExpense> table = new BeanTable<>();
         table.setHtmlAllowed(true);
         table.addColumn("Year", MonthlyExpense::getYear).setClassNameProvider(
                 item -> item.getYear() % 10 == 0 ? "millenium" : "");
         table.addColumn("Month",
                 expense -> "<i>" + expense.getMonth() + "</i>");
-        table.addColumn("expenses");
+        table.addColumn("Expenses", expense -> expense.getExpenses());
         table.setClassNameProvider(
                 item -> item.getExpenses() > 600 ? "expenses" : "");
         // table.addComponentColumn("expense", expense -> {
