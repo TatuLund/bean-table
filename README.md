@@ -10,18 +10,14 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
-### 1.2.0
-- Added BeanTable#setClassNameProvider and Column#setClassNameProvider
-- Added support for Column setter chaining
+### 2.1.1
+- Fix issue with missing initial data reset using in-memory data, hence data not shown
 
-### 1.1.1
-- Fix issue with setItems(..) not clearing old items
+### 2.1.0
+- Add support for components in headers, Column#setHeader(Component)
 
-### 1.1.0
-- Add paging support to make BeanTable usable for lazy data providers
-
-### 1.0.0 
-- First release
+### 2.0.0 
+- First release with support for DataView API introduced in Vaadin 17
 
 ## Development instructions
 
