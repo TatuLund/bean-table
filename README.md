@@ -1,3 +1,6 @@
+[![Published on Vaadin  Directory](https://img.shields.io/badge/Vaadin%20Directory-published-00b4f0.svg)](https://https://vaadin.com/directory/component/beantable)
+[![Stars on Vaadin Directory](https://img.shields.io/vaadin-directory/star/beantable.svg)](https://https://vaadin.com/directory/component/beantable)
+
 # Bean Table
 
 This is a simple Table component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out. This component does not support lazy loading of the data, thus it is purposed for the small data sets only. In other words this is designed for use cases where Grid is too heavy, overkill, etc.
