@@ -13,6 +13,9 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### 2.2.0
+- Added getters for Column and List<Column>
+
 ### 2.1.1
 - Fix issue with missing initial data reset using in-memory data, hence data not shown
 
