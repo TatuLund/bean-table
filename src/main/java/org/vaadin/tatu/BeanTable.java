@@ -73,7 +73,7 @@ import com.vaadin.flow.shared.Registration;
 @CssImport("./styles/bean-table.css")
 @Tag("table")
 public class BeanTable<T> extends HtmlComponent
-        implements HasListDataView<T, BeanTableListDataView<T>>, 
+        implements HasListDataView<T, BeanTableListDataView<T>>,
         HasDataView<T, Void, BeanTableDataView<T>>,
         HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasSize {
 
@@ -82,7 +82,8 @@ public class BeanTable<T> extends HtmlComponent
             DataProvider.ofItems());
     private int lastNotifiedDataSize = -1;
     private volatile int lastFetchedDataSize = -1;
-    private SerializableConsumer<UI> sizeRequest;    private Registration dataProviderListenerRegistration;
+    private SerializableConsumer<UI> sizeRequest;
+    private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
     private List<RowItem<T>> rows = new ArrayList<>();
     private Element headerElement;
@@ -99,7 +100,7 @@ public class BeanTable<T> extends HtmlComponent
     private final ArrayList<QuerySortOrder> backEndSorting = new ArrayList<>();
     private int dataProviderSize = -1;
     private StringProvider<T> classNameProvider;
-    private BeanTableLazyDataView lazyDataView;
+    private BeanTableLazyDataView<T> lazyDataView;
 
     @FunctionalInterface
     public interface StringProvider<T> extends ValueProvider<T, String> {
@@ -114,7 +115,7 @@ public class BeanTable<T> extends HtmlComponent
         @Override
         String apply(T item);
     }
-    
+
     @FunctionalInterface
     public interface ComponentProvider<T> extends ValueProvider<T, Component> {
 
@@ -128,7 +129,7 @@ public class BeanTable<T> extends HtmlComponent
         @Override
         Component apply(T item);
     }
-    
+
     /**
      * Configuration class for the Columns.
      *
@@ -141,6 +142,7 @@ public class BeanTable<T> extends HtmlComponent
         ComponentProvider<T> componentProvider;
         private StringProvider<T> classNameProvider;
         private Component headerComponent;
+        private String key;
 
         /**
          * Constructor with header and value provider
@@ -164,7 +166,8 @@ public class BeanTable<T> extends HtmlComponent
         /**
          * Set column header as String
          * 
-         * @param header String for header
+         * @param header
+         *            String for header
          * @return Column for chaining
          */
         public Column<R> setHeader(String header) {
@@ -176,7 +179,8 @@ public class BeanTable<T> extends HtmlComponent
         /**
          * Set column header as a Component
          * 
-         * @param header Component used for header
+         * @param header
+         *            Component used for header
          * @return Column for chaining
          */
         public Column<R> setHeader(Component header) {
@@ -188,7 +192,8 @@ public class BeanTable<T> extends HtmlComponent
         /**
          * Set component provider function for the column,
          * 
-         * @param componentProvider ColumnProvider Lambda callback bean instance to Column.
+         * @param componentProvider
+         *            ColumnProvider Lambda callback bean instance to Column.
          * @return Column for chaining
          */
         public Column<R> setComponentProvider(
@@ -208,7 +213,8 @@ public class BeanTable<T> extends HtmlComponent
         /**
          * Set class name provider for a table column, i.e. cells in the column.
          * 
-         * @param classNameProvider StringProvider Lambda callback bean instance to String.
+         * @param classNameProvider
+         *            StringProvider Lambda callback bean instance to String.
          * @return Column for chaining
          */
         public Column<R> setClassNameProvider(
@@ -229,6 +235,29 @@ public class BeanTable<T> extends HtmlComponent
                 return new Text(header);
             }
             return null;
+        }
+
+        /**
+         * Set unique key for the column
+         * 
+         * @param key
+         *            String value
+         */
+        public void setKey(String key) {
+            assert columns.stream().noneMatch(
+                    col -> col.getKey().equals(key)) : "The key must be unique";
+            Objects.requireNonNull(key, "The key can't be null");
+            this.key = key;
+        }
+
+        /**
+         * Gets the key of the column. Keys are automatically set if columns are
+         * created by property names, in that case key is the property name.
+         * 
+         * @return The key, can be null
+         */
+        public String getKey() {
+            return key;
         }
     }
 
@@ -271,7 +300,8 @@ public class BeanTable<T> extends HtmlComponent
                     value = column.getValueProvider().apply((T) item);
                 }
                 if (column.getClassNameProvider() != null) {
-                    String className = column.getClassNameProvider().apply((T) item);
+                    String className = column.getClassNameProvider()
+                            .apply((T) item);
                     if (className != null && !className.isEmpty()) {
                         cell.getClassList().add(className);
                     }
@@ -310,7 +340,8 @@ public class BeanTable<T> extends HtmlComponent
     /**
      * The default constructor. This creates a BeanTable without further
      * configuration. Use {@link #addColumn(String,ValueProvider)}
-     * {@link #addComponentColumn(String,ComponentProvider)} to configure columns.
+     * {@link #addComponentColumn(String,ComponentProvider)} to configure
+     * columns.
      */
     public BeanTable() {
         setClassName("bean-table");
@@ -328,9 +359,11 @@ public class BeanTable<T> extends HtmlComponent
      * constructor enables paging controls in the footer row. Also this creates
      * a BeanTable without further configuration. Use
      * {@link #addColumn(String,ValueProvider)}
-     * {@link #addComponentColumn(String,ComponentProvider)} to configure columns.
+     * {@link #addComponentColumn(String,ComponentProvider)} to configure
+     * columns.
      * 
-     * @param pageLength Size of the page
+     * @param pageLength
+     *            Size of the page
      */
     public BeanTable(int pageLength) {
         this();
@@ -343,7 +376,8 @@ public class BeanTable<T> extends HtmlComponent
      * Strings. Full names of the properties will be used as the header
      * captions.
      * 
-     * @param beanType the bean type to use, not <code>null</code>
+     * @param beanType
+     *            the bean type to use, not <code>null</code>
      */
     public BeanTable(Class<T> beanType) {
         this(beanType, true);
@@ -355,17 +389,19 @@ public class BeanTable<T> extends HtmlComponent
      * Strings. Full names of the properties will be used as the header
      * captions.
      * <p>
-     * Constructor with defined page length. Use this constructor
-     * with large data sources, i.e. DataProvider.fromCallBacks(..). This
-     * constructor enables paging controls in the footer row.
+     * Constructor with defined page length. Use this constructor with large
+     * data sources, i.e. DataProvider.fromCallBacks(..). This constructor
+     * enables paging controls in the footer row.
      * <p>
      * When autoCreateColumns is <code>false</code>. Use
      * {@link #setColumns(String...)} to define which properties to include and
      * in which order. You can also add a column for an individual property with
      * {@link #addColumn(String)}.
      *
-     * @param beanType the bean type to use, not <code>null</code>
-     * @param autoCreateColumns when <code>true</code>, columns are created automatically for
+     * @param beanType
+     *            the bean type to use, not <code>null</code>
+     * @param autoCreateColumns
+     *            when <code>true</code>, columns are created automatically for
      *            the properties of the beanType
      */
     public BeanTable(Class<T> beanType, boolean autoCreateColumns) {
@@ -393,39 +429,43 @@ public class BeanTable<T> extends HtmlComponent
      * in which order. You can also add a column for an individual property with
      * {@link #addColumn(String)}.
      *
-     * @param beanType the bean type to use, not <code>null</code>
-     * @param autoCreateColumns when <code>true</code>, columns are created automatically for
+     * @param beanType
+     *            the bean type to use, not <code>null</code>
+     * @param autoCreateColumns
+     *            when <code>true</code>, columns are created automatically for
      *            the properties of the beanType
-     * @param pageLength Size of the page
+     * @param pageLength
+     *            Size of the page
      */
-    public BeanTable(Class<T> beanType, boolean autoCreateColumns, int pageLength) {
-        this(beanType,autoCreateColumns);
+    public BeanTable(Class<T> beanType, boolean autoCreateColumns,
+            int pageLength) {
+        this(beanType, autoCreateColumns);
         this.pageLength = pageLength;
     }
-    
+
     /**
      * Add column to Table with the given property.
      * 
-     * @param property The property
+     * @param property
+     *            The property
      * 
      * @return A new column
      */
     private Column<T> addColumn(PropertyDefinition<T, ?> property) {
         String propertyName = property.getName();
         String name = formatName(propertyName);
-        return addColumn(name, property.getGetter());
+        Column<T> column = addColumn(name, property.getGetter());
+        column.setKey(propertyName);
+        return column;
     }
 
     private String formatName(String propertyName) {
-        if (propertyName == null || propertyName.isEmpty()) return "";
+        if (propertyName == null || propertyName.isEmpty())
+            return "";
         String name = propertyName.replaceAll(
-                String.format("%s|%s|%s",
-                        "(?<=[A-Z])(?=[A-Z][a-z])",
-                        "(?<=[^A-Z])(?=[A-Z])",
-                        "(?<=[A-Za-z])(?=[^A-Za-z])"
-                     ),
-                     " "
-                  );
+                String.format("%s|%s|%s", "(?<=[A-Z])(?=[A-Z][a-z])",
+                        "(?<=[^A-Z])(?=[A-Z])", "(?<=[A-Za-z])(?=[^A-Za-z])"),
+                " ");
         name = name.substring(0, 1).toUpperCase() + name.substring(1);
         return name;
     }
@@ -433,23 +473,27 @@ public class BeanTable<T> extends HtmlComponent
     /**
      * Add column to Table with the given property name.
      * 
-     * @param propertyName The property
+     * @param propertyName
+     *            The property
      */
     public void addColumn(String propertyName) {
         Objects.requireNonNull(propertySet,
                 "No property set defined, use BeanTable((Class<T> beanType) constructor");
-        Objects.requireNonNull("propetyName cannot be null");
+        Objects.requireNonNull(propertyName,"propetyName cannot be null");
         propertySet.getProperties()
                 .filter(property -> property.getName().equals(propertyName))
                 .findFirst().ifPresent(match -> {
-                    addColumn(formatName(match.getName()), match.getGetter());
+                    Column<T> column = addColumn(formatName(match.getName()),
+                            match.getGetter());
+                    column.setKey(propertyName);
                 });
     }
 
     /**
      * Configure BeanTable to have columns with given set of property names.
      * 
-     * @param propertyNames List of property names
+     * @param propertyNames
+     *            List of property names
      */
     public void setColumns(String... propertyNames) {
         for (String propertyName : propertyNames) {
@@ -462,13 +506,16 @@ public class BeanTable<T> extends HtmlComponent
      * reference, e.g. getter of the bean or lambda that returns the value for
      * this column.
      * 
-     * @param header The heafers as a string, can be null
-     * @param valueProvider The value provider
+     * @param header
+     *            The header as a string, can be null
+     * @param valueProvider
+     *            The value provider
      * 
      * @return A column
      */
     public Column<T> addColumn(String header,
             ValueProvider<T, ?> valueProvider) {
+        Objects.requireNonNull(valueProvider,"A valueProvider must not be null");
         Column<T> column = new Column<>(header, valueProvider);
         columns.add(column);
         updateHeader();
@@ -479,13 +526,16 @@ public class BeanTable<T> extends HtmlComponent
      * Add a column with component provider. Component provider is a lambda that
      * must return a new instance of a component.
      * 
-     * @param header Header as string, can be null
-     * @param componentProvider Component provider
+     * @param header
+     *            Header as string, can be null
+     * @param componentProvider
+     *            Component provider
      * 
      * @return A column
      */
     public Column<T> addComponentColumn(String header,
             ComponentProvider<T> componentProvider) {
+        Objects.requireNonNull(componentProvider,"A componentProvider must not be null");
         Column<T> column = new Column<>();
         column.setComponentProvider(componentProvider);
         columns.add(column);
@@ -557,8 +607,8 @@ public class BeanTable<T> extends HtmlComponent
             div.addClassName("bean-table-paging");
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
-            spacer.setText((currentPage+1) + "/" + (lastPage+1));
-            div.add(first,previous,spacer,next,last);
+            spacer.setText((currentPage + 1) + "/" + (lastPage + 1));
+            div.add(first, previous, spacer, next, last);
             cell.appendChild(div.getElement());
             footerElement.appendChild(rowElement);
         }
@@ -575,7 +625,7 @@ public class BeanTable<T> extends HtmlComponent
                 reset(false);
             }
         } else {
-            reset(false);            
+            reset(false);
         }
         setupDataProviderListener(dataProvider);
     }
@@ -628,7 +678,9 @@ public class BeanTable<T> extends HtmlComponent
                 estimate = getLazyDataView().getItemCountEstimate();
             }
             synchronized (dataProvider) {
-                dataProviderSize = estimate < 0 ? getDataProvider().size(new Query(filter)) : estimate;
+                dataProviderSize = estimate < 0
+                        ? getDataProvider().size(new Query(filter))
+                        : estimate;
             }
             updateFooter();
             int offset = pageLength * currentPage;
@@ -638,30 +690,30 @@ public class BeanTable<T> extends HtmlComponent
         synchronized (dataProvider) {
             final AtomicInteger itemCounter = new AtomicInteger(0);
             getDataProvider().fetch(query).map(row -> createRow((T) row))
-                .forEach(rowItem -> {
-                    addRow((BeanTable<T>.RowItem<T>) rowItem);
-                    itemCounter.incrementAndGet();
-                });
-                lastFetchedDataSize = itemCounter.get();
-                if (sizeRequest == null) {
-                    sizeRequest = ui -> {
-                        fireSizeEvent();
-                        sizeRequest = null;
-                    };
-                    // Size event is fired before client response so as to avoid
-                    // multiple size change events during server round trips
-                    runBeforeClientResponse(sizeRequest);
-                }        
+                    .forEach(rowItem -> {
+                        addRow((BeanTable<T>.RowItem<T>) rowItem);
+                        itemCounter.incrementAndGet();
+                    });
+            lastFetchedDataSize = itemCounter.get();
+            if (sizeRequest == null) {
+                sizeRequest = ui -> {
+                    fireSizeEvent();
+                    sizeRequest = null;
+                };
+                // Size event is fired before client response so as to avoid
+                // multiple size change events during server round trips
+                runBeforeClientResponse(sizeRequest);
+            }
         }
     }
 
     protected T fetchItem(int index) {
-        Query query = new Query(index, 1, backEndSorting,
-                inMemorySorting, filter);
+        Query query = new Query(index, 1, backEndSorting, inMemorySorting,
+                filter);
         Optional<T> result = getDataProvider().fetch(query).findFirst();
         return result.isPresent() ? result.get() : null;
     }
- 
+
     /**
      * Return the currently used data provider.
      * 
@@ -715,7 +767,8 @@ public class BeanTable<T> extends HtmlComponent
      * true the value string will be wrapped in span element and can contain
      * html.
      * 
-     * @param htmlAllowed A boolean value.
+     * @param htmlAllowed
+     *            A boolean value.
      */
     public void setHtmlAllowed(boolean htmlAllowed) {
         this.htmlAllowed = htmlAllowed;
@@ -724,17 +777,16 @@ public class BeanTable<T> extends HtmlComponent
     /**
      * Set class name provider for a table row.
      * 
-     * @param classNameProvider StringProvider Lambda callback bean instance to String.
+     * @param classNameProvider
+     *            StringProvider Lambda callback bean instance to String.
      */
-    public void setClassNameProvider(
-            StringProvider<T> classNameProvider) {
+    public void setClassNameProvider(StringProvider<T> classNameProvider) {
         this.classNameProvider = classNameProvider;
     }
 
     public StringProvider<T> getClassNameProvider() {
         return classNameProvider;
     }
-
 
     @Override
     public BeanTableDataView<T> getGenericDataView() {
@@ -743,8 +795,7 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     @Override
-    public BeanTableDataView<T> setItems(
-            DataProvider<T, Void> dataProvider) {
+    public BeanTableDataView<T> setItems(DataProvider<T, Void> dataProvider) {
         setDataProvider(dataProvider);
         return getGenericDataView();
     }
@@ -768,12 +819,12 @@ public class BeanTable<T> extends HtmlComponent
     @Override
     public BeanTableListDataView<T> getListDataView() {
         return new BeanTableListDataView<>(this::getDataProvider, this,
-                this::identifierProviderChanged, (filter, sorting) -> reset(true));
+                this::identifierProviderChanged,
+                (filter, sorting) -> reset(true));
     }
 
     @Override
-    public BeanTableListDataView<T> setItems(
-            ListDataProvider<T> dataProvider) {
+    public BeanTableListDataView<T> setItems(ListDataProvider<T> dataProvider) {
         setDataProvider(dataProvider);
         return getListDataView();
     }
@@ -826,9 +877,30 @@ public class BeanTable<T> extends HtmlComponent
     @Override
     public BeanTableLazyDataView<T> getLazyDataView() {
         if (lazyDataView == null) {
-            lazyDataView = new BeanTableLazyDataView<>(this::getDataProvider, this);
+            lazyDataView = new BeanTableLazyDataView<>(this::getDataProvider,
+                    this);
         }
         return lazyDataView;
     }
 
+    /**
+     * Get list of the currently set columns.
+     * 
+     * @return List of Columns
+     */
+    public List<Column<T>> getColumns() {
+        return columns;
+    }
+
+    /**
+     * Get the column by its key.
+     * 
+     * @param key The key, can't be null
+     * @return Optional Column
+     */
+    public Optional<Column<T>> getColumn(String key) {
+        Objects.requireNonNull(key, "The key cannot be null");
+        return columns.stream().filter(col -> col.getKey().equals(key))
+                .findFirst();
+    }
 }
