@@ -3,8 +3,11 @@ package org.vaadin.tatu;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.vaadin.tatu.BeanTable.ColumnAlignment;
+
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Span;
@@ -30,11 +33,15 @@ public class View extends VerticalLayout {
         setSizeFull();
         BeanTable<MonthlyExpense> table = new BeanTable<>();
         table.setHtmlAllowed(true);
-        table.addColumn("Year", MonthlyExpense::getYear).setClassNameProvider(
-                item -> item.getYear() % 10 == 0 ? "millenium" : "");
+        table.addColumn("Year", MonthlyExpense::getYear)
+                .setClassNameProvider(
+                        item -> item.getYear() % 10 == 0 ? "millenium" : "")
+                .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
         table.addColumn("Month",
                 expense -> "<i>" + expense.getMonth() + "</i>");
-        table.addColumn("Expenses", expense -> expense.getExpenses());
+        table.addColumn("Expenses", expense -> expense.getExpenses())
+                .setTooltipProvider(item -> "Expenses of " + item.getMonth()
+                        + " were " + item.getExpenses());
         table.setClassNameProvider(
                 item -> item.getExpenses() > 600 ? "expenses" : "");
         // table.addComponentColumn("expense", expense -> {
@@ -47,6 +54,7 @@ public class View extends VerticalLayout {
         // });
         table.addComponentColumn(null, expense -> {
             Button edit = new Button("edit");
+            edit.addThemeVariants(ButtonVariant.LUMO_SMALL);
             edit.addClickListener(event -> {
                 Dialog dialog = new Dialog();
                 index = data.indexOf(expense);
@@ -54,7 +62,8 @@ public class View extends VerticalLayout {
                 dialog.open();
             });
             return edit;
-        }).setHeader(new Html("<span style='color: blue'>Edit</span>"));
+        }).setHeader(new Html("<span style='color: blue'>Edit</span>"))
+                .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
         // table.setColumns("year","month","expenses");
         data = getData(25);
         dataView = table.setItems(data);
@@ -70,12 +79,12 @@ public class View extends VerticalLayout {
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
-        Button newData = new Button("Add "+nextYear);
+        Button newData = new Button("Add " + nextYear);
         newData.addClickListener(event -> {
             dataView.addItems(getNewData(nextYear++));
-            newData.setText("Add "+nextYear);
+            newData.setText("Add " + nextYear);
         });
-        RouterLink lazy = new RouterLink("Lazy load demo",LazyView.class);
+        RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
         add(plus, minus, table, newData, lazy);
     }
 
@@ -130,7 +139,8 @@ public class View extends VerticalLayout {
         String[] monthNames = new java.text.DateFormatSymbols().getMonths();
         List<MonthlyExpense> data = new ArrayList<>();
         for (int month = 0; month < 12; month++) {
-            data.add(new MonthlyExpense(monthNames[month], year, getExpenses()));
+            data.add(
+                    new MonthlyExpense(monthNames[month], year, getExpenses()));
         }
         return data;
     }

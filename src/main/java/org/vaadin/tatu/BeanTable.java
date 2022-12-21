@@ -1,9 +1,11 @@
 package org.vaadin.tatu;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -101,6 +103,12 @@ public class BeanTable<T> extends HtmlComponent
     private int dataProviderSize = -1;
     private StringProvider<T> classNameProvider;
     private BeanTableLazyDataView<T> lazyDataView;
+    private Random rand = new Random();
+    private BeanTableI18n i18n;
+
+    public enum ColumnAlignment {
+        CENTER, LEFT, RIGHT;
+    }
 
     @FunctionalInterface
     public interface StringProvider<T> extends ValueProvider<T, String> {
@@ -136,13 +144,16 @@ public class BeanTable<T> extends HtmlComponent
      * @param <R>
      *            Bean type
      */
-    public class Column<R> {
+    public class Column<R> implements Serializable {
         String header;
         ValueProvider<T, ?> valueProvider;
         ComponentProvider<T> componentProvider;
         private StringProvider<T> classNameProvider;
+        private StringProvider<T> tooltipProvider;
         private Component headerComponent;
         private String key;
+        private ColumnAlignment columnAlignment;
+        private String width;
 
         /**
          * Constructor with header and value provider
@@ -189,11 +200,42 @@ public class BeanTable<T> extends HtmlComponent
             return this;
         }
 
+        public Component getHeader() {
+            if (headerComponent != null) {
+                return headerComponent;
+            }
+            if (header != null) {
+                return new Text(header);
+            }
+            return null;
+        }
+
+        /**
+         * Set tooltip provider function for the column,
+         * <p>
+         * Note: Not tooltip provider applied on component columns. Add tooltip
+         * to the component directly.
+         * 
+         * @param tooltipProvider
+         *            StringProvider Lambda callback bean instance for the
+         *            Column.
+         * @return Column for chaining
+         */
+        public Column<R> setTooltipProvider(StringProvider<T> tooltipProvider) {
+            this.tooltipProvider = tooltipProvider;
+            return this;
+        }
+
+        public StringProvider<T> getTooltipProvider() {
+            return tooltipProvider;
+        }
+
         /**
          * Set component provider function for the column,
          * 
          * @param componentProvider
-         *            ColumnProvider Lambda callback bean instance to Column.
+         *            ComponnetProvider Lambda callback bean instance for the
+         *            Column.
          * @return Column for chaining
          */
         public Column<R> setComponentProvider(
@@ -227,14 +269,37 @@ public class BeanTable<T> extends HtmlComponent
             return classNameProvider;
         }
 
-        public Component getHeader() {
-            if (headerComponent != null) {
-                return headerComponent;
-            }
-            if (header != null) {
-                return new Text(header);
-            }
-            return null;
+        /**
+         * Set vertical alignment of the cell content, CENTER, LEFT, RIGHT.
+         * 
+         * @param alignment
+         *            ColumnAlignment, null to unset.
+         * @return Column for chaining
+         */
+        public Column<R> setAlignment(ColumnAlignment alignment) {
+            columnAlignment = alignment;
+            return this;
+        }
+
+        public ColumnAlignment getAlignment() {
+            return columnAlignment;
+        }
+
+        /**
+         * Set the width of the column.
+         * 
+         * @param width
+         *            CSS compatible width string, null to unset.
+         * @return Column for chaining
+         */
+        public Column<R> setWidth(String width) {
+            this.width = width;
+            updateHeader();
+            return this;
+        }
+
+        public String getWidth() {
+            return width;
         }
 
         /**
@@ -242,12 +307,14 @@ public class BeanTable<T> extends HtmlComponent
          * 
          * @param key
          *            String value
+         * @return Column for chaining
          */
-        public void setKey(String key) {
+        public Column<R> setKey(String key) {
             assert columns.stream().noneMatch(
                     col -> col.getKey().equals(key)) : "The key must be unique";
             Objects.requireNonNull(key, "The key can't be null");
             this.key = key;
+            return this;
         }
 
         /**
@@ -259,6 +326,7 @@ public class BeanTable<T> extends HtmlComponent
         public String getKey() {
             return key;
         }
+
     }
 
     /**
@@ -267,7 +335,7 @@ public class BeanTable<T> extends HtmlComponent
      * @param <R>
      *            Bean type
      */
-    private class RowItem<R> {
+    private class RowItem<R> implements Serializable {
 
         private R item;
         private Element rowElement;
@@ -292,6 +360,12 @@ public class BeanTable<T> extends HtmlComponent
                             "Column is lacking eihercomponent or value provider.");
                 }
                 Element cell = new Element("td");
+                if (column.getAlignment() != null) {
+                    cell.getStyle().set("text-align",
+                            column.getAlignment().toString().toLowerCase());
+                } else {
+                    cell.getStyle().remove("text-align");
+                }
                 Component component = null;
                 Object value = null;
                 if (column.getComponentProvider() != null) {
@@ -310,6 +384,15 @@ public class BeanTable<T> extends HtmlComponent
                     value = "";
                 if (component != null) {
                     cell.appendChild(component.getElement());
+                } else if (column.tooltipProvider != null) {
+                    String key = randomId(8);
+                    String tooltipText = column.getTooltipProvider()
+                            .apply((T) item);
+                    Html span = new Html("<span id='tooltip-" + key + "'>"
+                            + value.toString() + "<vaadin-tooltip text='"
+                            + tooltipText + "' for='tooltip-" + key
+                            + "'></vaadin-tooltip></span>");
+                    cell.appendChild(span.getElement());
                 } else if (htmlAllowed) {
                     Html span = new Html(
                             "<span>" + value.toString() + "</span>");
@@ -479,7 +562,7 @@ public class BeanTable<T> extends HtmlComponent
     public void addColumn(String propertyName) {
         Objects.requireNonNull(propertySet,
                 "No property set defined, use BeanTable((Class<T> beanType) constructor");
-        Objects.requireNonNull(propertyName,"propetyName cannot be null");
+        Objects.requireNonNull(propertyName, "propetyName cannot be null");
         propertySet.getProperties()
                 .filter(property -> property.getName().equals(propertyName))
                 .findFirst().ifPresent(match -> {
@@ -515,7 +598,8 @@ public class BeanTable<T> extends HtmlComponent
      */
     public Column<T> addColumn(String header,
             ValueProvider<T, ?> valueProvider) {
-        Objects.requireNonNull(valueProvider,"A valueProvider must not be null");
+        Objects.requireNonNull(valueProvider,
+                "A valueProvider must not be null");
         Column<T> column = new Column<>(header, valueProvider);
         columns.add(column);
         updateHeader();
@@ -535,7 +619,8 @@ public class BeanTable<T> extends HtmlComponent
      */
     public Column<T> addComponentColumn(String header,
             ComponentProvider<T> componentProvider) {
-        Objects.requireNonNull(componentProvider,"A componentProvider must not be null");
+        Objects.requireNonNull(componentProvider,
+                "A componentProvider must not be null");
         Column<T> column = new Column<>();
         column.setComponentProvider(componentProvider);
         columns.add(column);
@@ -551,6 +636,7 @@ public class BeanTable<T> extends HtmlComponent
             if (column.getHeader() != null) {
                 cell.appendChild(column.getHeader().getElement());
             }
+            cell.getStyle().set("width", column.getWidth());
             rowElement.appendChild(cell);
         });
         headerElement.appendChild(rowElement);
@@ -603,6 +689,7 @@ public class BeanTable<T> extends HtmlComponent
                     getDataProvider().refreshAll();
                 }
             });
+            updateTooltips(first, previous, next, last);
             Div div = new Div();
             div.addClassName("bean-table-paging");
             Div spacer = new Div();
@@ -611,6 +698,16 @@ public class BeanTable<T> extends HtmlComponent
             div.add(first, previous, spacer, next, last);
             cell.appendChild(div.getElement());
             footerElement.appendChild(rowElement);
+        }
+    }
+
+    private void updateTooltips(Button first, Button previous, Button next,
+            Button last) {
+        if (i18n != null) {
+            first.setTooltipText(i18n.getFirstPage());
+            last.setTooltipText(i18n.getLastPage());
+            previous.setTooltipText(i18n.getPreviousPage());
+            next.setTooltipText(i18n.getNextPage());
         }
     }
 
@@ -895,7 +992,8 @@ public class BeanTable<T> extends HtmlComponent
     /**
      * Get the column by its key.
      * 
-     * @param key The key, can't be null
+     * @param key
+     *            The key, can't be null
      * @return Optional Column
      */
     public Optional<Column<T>> getColumn(String key) {
@@ -903,4 +1001,82 @@ public class BeanTable<T> extends HtmlComponent
         return columns.stream().filter(col -> col.getKey().equals(key))
                 .findFirst();
     }
+
+    private String randomId(int chars) {
+        int limit = (10 * chars) - 1;
+        String key = "" + rand.nextInt(limit);
+        key = String.format("%" + chars + "s", key).replace(' ', '0');
+        return "pivot-" + key;
+    }
+
+    /**
+     * Sets the internationalization properties (texts used for button tooltips)
+     * for this component.
+     *
+     * @param i18n
+     *            the internationalized properties, null to disable all
+     *            tooltips.
+     */
+    public void setI18n(BeanTableI18n i18n) {
+        this.i18n = i18n;
+    }
+
+    /**
+     * Gets the internationalization object previously set for this component.
+     *
+     * @return the i18n object. It will be <code>null</code>, If the i18n
+     *         properties weren't set.
+     */
+    public BeanTableI18n getI18n() {
+        return i18n;
+    }
+
+    public static class BeanTableI18n implements Serializable {
+        private String lastPage;
+        private String previousPage;
+        private String nextPage;
+        private String firstPage;
+
+        public String getLastPage() {
+            return lastPage;
+        }
+
+        public void setLastPage(String lastPage) {
+            this.lastPage = lastPage;
+        }
+
+        public String getPreviousPage() {
+            return previousPage;
+        }
+
+        public void setPreviousPage(String previousPage) {
+            this.previousPage = previousPage;
+        }
+
+        public String getNextPage() {
+            return nextPage;
+        }
+
+        public void setNextPage(String nextPage) {
+            this.nextPage = nextPage;
+        }
+
+        public String getFirstPage() {
+            return firstPage;
+        }
+
+        public void setFirstPage(String firstPage) {
+            this.firstPage = firstPage;
+        }
+
+        public static BeanTableI18n getDefault() {
+            BeanTableI18n english = new BeanTableI18n();
+            english.setFirstPage("First page");
+            english.setNextPage("Next page");
+            english.setLastPage("Last page");
+            english.setPreviousPage("Previous page");
+            return english;
+        }
+    }
+
 }

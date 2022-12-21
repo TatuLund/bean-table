@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.vaadin.tatu.BeanTable.BeanTableI18n;
+
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -20,6 +22,7 @@ public class LazyView extends VerticalLayout {
         table.setColumns("firstName","lastName","age","phoneNumber","maritalStatus");
         table.addColumn("Postal Code",person -> person.getAddress() == null ? "" : person.getAddress().getPostalCode());
         table.addColumn("City",person -> person.getAddress() == null ? "" : person.getAddress().getCity());
+        table.setI18n(BeanTableI18n.getDefault());
         
         BeanTableLazyDataView<Person> dataView = table.setItems(query -> personService
                         .fetch(query.getOffset(), query.getLimit(), null).stream(),query -> personService.count(null));

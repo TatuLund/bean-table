@@ -13,6 +13,11 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### 2.3.0
+- Added tooltip support
+- Added width API for column
+- Added column alignment API
+
 ### 2.2.0
 - Added getters for Column and List<Column>
 
