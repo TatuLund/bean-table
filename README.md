@@ -13,6 +13,16 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### 2.5.0
+- Added getPage / setPage
+- Fixed issue page not being adjusted when filtering
+
+### 2.4.1
+- Fix NPE in paged mode
+ 
+### 2.4.0
+- Add A11y support
+
 ### 2.3.0
 - Added tooltip support
 - Added width API for column
