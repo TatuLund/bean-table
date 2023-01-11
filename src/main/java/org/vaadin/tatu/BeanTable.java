@@ -44,6 +44,7 @@ import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.dom.Element;
+import com.vaadin.flow.function.SerializableBiFunction;
 import com.vaadin.flow.function.SerializableComparator;
 import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.function.SerializablePredicate;
@@ -56,10 +57,11 @@ import com.vaadin.flow.shared.Registration;
  * and ultra simple design. The purpose of this component is to be a little
  * sibling to Grid. Thus there are many features intentionally left out.
  * 
- * This component does not support lazy loading of the data, thus it is purposed
- * for the small data sets only.
+ * This component does support lazy loading of the data and uses paging for it.
  * 
  * Table's cells can be populated by text, html or components.
+ * 
+ * A11y supported.
  * 
  * Currently only minimal styling included, no scrolling, etc. provided.
  * 
@@ -105,6 +107,7 @@ public class BeanTable<T> extends HtmlComponent
     private BeanTableLazyDataView<T> lazyDataView;
     private Random rand = new Random();
     private BeanTableI18n i18n;
+    private Element captionElement;
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -154,6 +157,7 @@ public class BeanTable<T> extends HtmlComponent
         private String key;
         private ColumnAlignment columnAlignment;
         private String width;
+        private boolean rowHeader;
 
         /**
          * Constructor with header and value provider
@@ -327,6 +331,26 @@ public class BeanTable<T> extends HtmlComponent
             return key;
         }
 
+        /**
+         * Sets the row header nature for the column for accessibility.
+         * 
+         * @param rowHeader
+         *            Use true if this column should act as row header.
+         * @return Column for chaining
+         */
+        public Column<R> setRowHeader(boolean rowHeader) {
+            this.rowHeader = rowHeader;
+            return this;
+        }
+
+        /**
+         * Returns if true if this column acts as row header.
+         * 
+         * @return Boolean value.
+         */
+        public boolean isRowHeader() {
+            return rowHeader;
+        }
     }
 
     /**
@@ -343,6 +367,7 @@ public class BeanTable<T> extends HtmlComponent
         public RowItem(String id, R item) {
             this.item = item;
             rowElement = new Element("tr");
+            rowElement.setAttribute("role", "row");
             if (getClassNameProvider() != null) {
                 String className = getClassNameProvider().apply((T) item);
                 if (className != null && !className.isEmpty()) {
@@ -359,7 +384,15 @@ public class BeanTable<T> extends HtmlComponent
                     throw new IllegalStateException(
                             "Column is lacking eihercomponent or value provider.");
                 }
-                Element cell = new Element("td");
+
+                Element cell;
+                if (column.isRowHeader()) {
+                    cell = new Element("th");
+                    cell.setAttribute("role", "rowheader");
+                } else {
+                    cell = new Element("td");
+                    cell.setAttribute("role", "cell");
+                }
                 if (column.getAlignment() != null) {
                     cell.getStyle().set("text-align",
                             column.getAlignment().toString().toLowerCase());
@@ -385,7 +418,7 @@ public class BeanTable<T> extends HtmlComponent
                 if (component != null) {
                     cell.appendChild(component.getElement());
                 } else if (column.tooltipProvider != null) {
-                    String key = randomId(8);
+                    String key = randomId("tooltip", 8);
                     String tooltipText = column.getTooltipProvider()
                             .apply((T) item);
                     Html span = new Html("<span id='tooltip-" + key + "'>"
@@ -428,9 +461,13 @@ public class BeanTable<T> extends HtmlComponent
      */
     public BeanTable() {
         setClassName("bean-table");
+        getElement().setAttribute("role", "table");
+        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
         headerElement = new Element("thead");
+        headerElement.setAttribute("role", "rowgroup");
         footerElement = new Element("tfoot");
         bodyElement = new Element("tbody");
+        bodyElement.setAttribute("role", "rowgroup");
         getElement().appendChild(headerElement);
         getElement().appendChild(bodyElement);
         getElement().appendChild(footerElement);
@@ -451,6 +488,7 @@ public class BeanTable<T> extends HtmlComponent
     public BeanTable(int pageLength) {
         this();
         this.pageLength = pageLength;
+        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
     }
 
     /**
@@ -524,6 +562,7 @@ public class BeanTable<T> extends HtmlComponent
             int pageLength) {
         this(beanType, autoCreateColumns);
         this.pageLength = pageLength;
+        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
     }
 
     /**
@@ -631,8 +670,11 @@ public class BeanTable<T> extends HtmlComponent
     private void updateHeader() {
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
+        rowElement.setAttribute("role", "row");
+        rowElement.setAttribute("aria-rowindex", "1");
         columns.forEach(column -> {
             Element cell = new Element("th");
+            cell.setAttribute("role", "columnheader");
             if (column.getHeader() != null) {
                 cell.appendChild(column.getHeader().getElement());
             }
@@ -695,6 +737,8 @@ public class BeanTable<T> extends HtmlComponent
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
             spacer.setText((currentPage + 1) + "/" + (lastPage + 1));
+            spacer.getElement().setAttribute("aria-label", i18n
+                    .getPageProvider().apply(currentPage + 1, lastPage + 1));
             div.add(first, previous, spacer, next, last);
             cell.appendChild(div.getElement());
             footerElement.appendChild(rowElement);
@@ -705,9 +749,14 @@ public class BeanTable<T> extends HtmlComponent
             Button last) {
         if (i18n != null) {
             first.setTooltipText(i18n.getFirstPage());
+            first.getElement().setAttribute("aria-label", i18n.getFirstPage());
             last.setTooltipText(i18n.getLastPage());
+            last.getElement().setAttribute("aria-label", i18n.getLastPage());
             previous.setTooltipText(i18n.getPreviousPage());
+            previous.getElement().setAttribute("aria-label",
+                    i18n.getPreviousPage());
             next.setTooltipText(i18n.getNextPage());
+            next.getElement().setAttribute("aria-label", i18n.getNextPage());
         }
     }
 
@@ -755,8 +804,10 @@ public class BeanTable<T> extends HtmlComponent
         return rowItem;
     }
 
-    private void addRow(RowItem<T> rowItem) {
+    private void addRow(RowItem<T> rowItem, int index) {
         rows.add(rowItem);
+        rowItem.getRowElement().setAttribute("aria-rowindex",
+                String.valueOf(index + 2));
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
@@ -788,10 +839,13 @@ public class BeanTable<T> extends HtmlComponent
             final AtomicInteger itemCounter = new AtomicInteger(0);
             getDataProvider().fetch(query).map(row -> createRow((T) row))
                     .forEach(rowItem -> {
-                        addRow((BeanTable<T>.RowItem<T>) rowItem);
+                        addRow((BeanTable<T>.RowItem<T>) rowItem,
+                                itemCounter.get());
                         itemCounter.incrementAndGet();
                     });
             lastFetchedDataSize = itemCounter.get();
+            getElement().setAttribute("aria-rowcount",
+                    String.valueOf(lastFetchedDataSize));
             if (sizeRequest == null) {
                 sizeRequest = ui -> {
                     fireSizeEvent();
@@ -1002,11 +1056,32 @@ public class BeanTable<T> extends HtmlComponent
                 .findFirst();
     }
 
-    private String randomId(int chars) {
+    private String randomId(String prefix, int chars) {
         int limit = (10 * chars) - 1;
         String key = "" + rand.nextInt(limit);
         key = String.format("%" + chars + "s", key).replace(' ', '0');
-        return "pivot-" + key;
+        return prefix + "-" + key;
+    }
+
+    /**
+     * Set the caption associated with the Table
+     * 
+     * @param caption
+     *            A string value. Null will remove caption.
+     */
+    public void setCaption(String caption) {
+        if (this.captionElement != null) {
+            getElement().removeChild(captionElement);
+        } else if (caption == null) {
+            getElement().removeChild(captionElement);
+        } else {
+            captionElement = new Element("caption");
+            String id = randomId("label", 8);
+            captionElement.setAttribute("id", id);
+            captionElement.setText(caption);
+            getElement().setAttribute("aria-labelledby", id);
+            getElement().appendChild(captionElement);
+        }
     }
 
     /**
@@ -1036,6 +1111,7 @@ public class BeanTable<T> extends HtmlComponent
         private String previousPage;
         private String nextPage;
         private String firstPage;
+        private SerializableBiFunction<Integer, Integer, String> pageProvider;
 
         public String getLastPage() {
             return lastPage;
@@ -1069,12 +1145,23 @@ public class BeanTable<T> extends HtmlComponent
             this.firstPage = firstPage;
         }
 
+        public SerializableBiFunction<Integer, Integer, String> getPageProvider() {
+            return this.pageProvider;
+        }
+
+        public void setPageProvider(
+                SerializableBiFunction<Integer, Integer, String> provider) {
+            this.pageProvider = provider;
+        }
+
         public static BeanTableI18n getDefault() {
             BeanTableI18n english = new BeanTableI18n();
             english.setFirstPage("First page");
             english.setNextPage("Next page");
             english.setLastPage("Last page");
             english.setPreviousPage("Previous page");
+            english.setPageProvider((currentPage, lastPage) -> "Page "
+                    + currentPage + " of " + lastPage);
             return english;
         }
     }

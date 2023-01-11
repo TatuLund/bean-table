@@ -7,6 +7,10 @@
     border: 1px solid var(--lumo-contrast-20pct)
 }
 
+.bean-table th {
+    border: 1px solid var(--lumo-contrast-20pct)
+}
+
 .bean-table {
     border-collapse: collapse;
 }
@@ -20,4 +24,21 @@
 .bean-table-page {
 	flex-grow: 1;
 	text-align: center;
+}
+
+.bean-table caption {
+    color: var(--lumo-secondary-text-color);
+	font-weight: 500;
+	font-size: var(--lumo-font-size-s);
+	transition: color 0.2s;
+	line-height: 1;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	text-align: left;
+	max-width: 100%;
+	box-sizing: border-box;
+    padding-right: 1em;
+    padding-bottom: 0.5em;	
+    margin-left: calc(var(--lumo-border-radius-m) / 4);    
 }

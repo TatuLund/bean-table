@@ -37,13 +37,14 @@ public class View extends VerticalLayout {
                 .setClassNameProvider(
                         item -> item.getYear() % 10 == 0 ? "millenium" : "")
                 .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
-        table.addColumn("Month",
-                expense -> "<i>" + expense.getMonth() + "</i>");
+        table.addColumn("Month", expense -> "<i>" + expense.getMonth() + "</i>")
+                .setRowHeader(true);
         table.addColumn("Expenses", expense -> expense.getExpenses())
                 .setTooltipProvider(item -> "Expenses of " + item.getMonth()
                         + " were " + item.getExpenses());
         table.setClassNameProvider(
                 item -> item.getExpenses() > 600 ? "expenses" : "");
+        table.setCaption("Monthly Expenses");
         // table.addComponentColumn("expense", expense -> {
         // NumberField field = new NumberField();
         // field.setValue(expense.getExpenses());
