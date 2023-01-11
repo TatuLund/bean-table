@@ -90,12 +90,9 @@ public class BeanTable<T> extends HtmlComponent
     private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
     private List<RowItem<T>> rows = new ArrayList<>();
-    private Element headerElement;
-    private Element bodyElement;
     private boolean htmlAllowed;
     private Class<T> beanType;
     private PropertySet<T> propertySet;
-    private Element footerElement;
     private int pageLength = -1;
     private int currentPage = 0;
     private Object filter;
@@ -107,7 +104,11 @@ public class BeanTable<T> extends HtmlComponent
     private BeanTableLazyDataView<T> lazyDataView;
     private Random rand = new Random();
     private BeanTableI18n i18n;
-    private Element captionElement;
+
+    Element captionElement;
+    Element headerElement;
+    Element bodyElement;
+    Element footerElement;
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -314,8 +315,8 @@ public class BeanTable<T> extends HtmlComponent
          * @return Column for chaining
          */
         public Column<R> setKey(String key) {
-            assert columns.stream().noneMatch(
-                    col -> col.getKey().equals(key)) : "The key must be unique";
+            assert columns.stream().noneMatch(col -> Objects
+                    .equals(col.getKey(), key)) : "The key must be unique";
             Objects.requireNonNull(key, "The key can't be null");
             this.key = key;
             return this;
@@ -737,8 +738,11 @@ public class BeanTable<T> extends HtmlComponent
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
             spacer.setText((currentPage + 1) + "/" + (lastPage + 1));
-            spacer.getElement().setAttribute("aria-label", i18n
-                    .getPageProvider().apply(currentPage + 1, lastPage + 1));
+            if (i18n != null && i18n.getPageProvider() != null) {
+                spacer.getElement().setAttribute("aria-label",
+                        i18n.getPageProvider().apply(currentPage + 1,
+                                lastPage + 1));
+            }
             div.add(first, previous, spacer, next, last);
             cell.appendChild(div.getElement());
             footerElement.appendChild(rowElement);
@@ -830,8 +834,12 @@ public class BeanTable<T> extends HtmlComponent
                         ? getDataProvider().size(new Query(filter))
                         : estimate;
             }
-            updateFooter();
             int offset = pageLength * currentPage;
+            if (dataProviderSize < offset) {
+                currentPage = Math.floorDiv(dataProviderSize, pageLength);
+                offset = currentPage * pageLength;
+            }
+            updateFooter();
             query = new Query(offset, pageLength, backEndSorting,
                     inMemorySorting, filter);
         }
@@ -1082,6 +1090,33 @@ public class BeanTable<T> extends HtmlComponent
             getElement().setAttribute("aria-labelledby", id);
             getElement().appendChild(captionElement);
         }
+    }
+
+    /**
+     * Set the currently shown page.
+     * 
+     * @param page
+     *            int value base 0
+     * @throws IllegalArgumentException
+     *             if BeanTable is not in paged mode or page is not in
+     *             acceptable range.
+     */
+    public void setPage(int page) {
+        if (pageLength < 0 || page < 0
+                || page * pageLength > dataProviderSize) {
+            throw new IllegalArgumentException("Page does not exists");
+        }
+        currentPage = page;
+        reset(false);
+    }
+
+    /**
+     * Get current page.
+     * 
+     * @return int value base 0, or -1 if BeanTable is not paged mode.
+     */
+    public int getPage() {
+        return currentPage;
     }
 
     /**

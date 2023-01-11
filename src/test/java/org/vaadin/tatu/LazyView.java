@@ -6,9 +6,13 @@ import java.util.stream.Stream;
 
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
 
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.CallbackDataProvider;
+import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
+import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 
@@ -19,69 +23,42 @@ public class LazyView extends VerticalLayout {
         setSizeFull();
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
-        table.setColumns("firstName","lastName","age","phoneNumber","maritalStatus");
-        table.addColumn("Postal Code",person -> person.getAddress() == null ? "" : person.getAddress().getPostalCode());
-        table.addColumn("City",person -> person.getAddress() == null ? "" : person.getAddress().getCity());
+        table.setColumns("firstName", "lastName", "age", "phoneNumber",
+                "maritalStatus");
+        table.addColumn("Postal Code",
+                person -> person.getAddress() == null ? ""
+                        : person.getAddress().getPostalCode());
+        table.addColumn("City", person -> person.getAddress() == null ? ""
+                : person.getAddress().getCity());
         table.setI18n(BeanTableI18n.getDefault());
-        
-        BeanTableLazyDataView<Person> dataView = table.setItems(query -> personService
-                        .fetch(query.getOffset(), query.getLimit(), null).stream(),query -> personService.count(null));
+
+        CallbackDataProvider<Person, String> dataProvider = DataProvider
+                .fromFilteringCallbacks(
+                        query -> personService.fetch(query.getOffset(),
+                                query.getLimit(), query.getFilter()).stream(),
+                        query -> personService.count(query.getFilter()));
+
+        ConfigurableFilterDataProvider<Person, Void, String> dp = dataProvider
+                .withConfigurableFilter();
+
+        BeanTableDataView<Person> dataView = table.setItems(dp);
+
         table.setWidthFull();
+
         TextField filter = new TextField("Filter");
         filter.setValueChangeMode(ValueChangeMode.LAZY);
         filter.addValueChangeListener(event -> {
-            table.setItems(query -> personService
-                    .fetch(query.getOffset(), query.getLimit(), event.getValue()).stream(),query -> personService.count(event.getValue()));
+            dp.setFilter(event.getValue());
         });
         dataView.addItemCountChangeListener(event -> {
-            Notification.show("Count: "+event.getItemCount());
+            Notification.show("Count: " + event.getItemCount());
         });
-        add(filter,table);
-    }
 
-    public class PersonService {
-        private PersonData personData = new PersonData();
+        Button button = new Button("3");
+        button.addClickListener(e -> {
+            table.setPage(2);
+        });
 
-        public List<Person> fetch(int offset, int limit, String filter) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-            }
-            int end = offset + limit;
-            int size = count(filter);
-            if (size <= end) {
-                end = size;
-            }
-            if (filter != null && !filter.isEmpty()) {
-                return personData.getPersons().stream().filter(item -> {
-                    return item.toString().toLowerCase().contains(filter.toLowerCase());
-                }).collect(Collectors.toList()).subList(offset, end);
-            } else {    
-                return personData.getPersons().subList(offset, end);
-            }
-        }
-
-        public Stream<Person> fetchPage(int page, int pageSize) {
-            return personData.getPersons().stream().skip(page * pageSize)
-                    .limit(pageSize);
-        }
-
-        public int count(String filter) {
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-            }
-            if (filter != null && !filter.isEmpty()) {
-                return personData.getPersons().stream().filter(item -> {
-                    return item.toString().toLowerCase().contains(filter.toLowerCase());
-                }).collect(Collectors.toList()).size();
-            } else {    
-                return personData.getPersons().size();
-            }
-        }
-
-        public List<Person> fetchAll() {
-            return personData.getPersons();
-        }
+        add(filter, table, button);
     }
 }
