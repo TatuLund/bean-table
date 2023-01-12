@@ -13,6 +13,10 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### Version 2.6.0
+- Added cell focus behaviors, which are useful with A11y. By default no focus behavior.
+- Did some small improvements in A11y behaviors by testing the component with NVDA
+
 ### 2.5.0
 - Added getPage / setPage
 - Fixed issue page not being adjusted when filtering

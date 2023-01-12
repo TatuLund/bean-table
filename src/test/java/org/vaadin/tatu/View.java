@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.vaadin.tatu.BeanTable.ColumnAlignment;
+import org.vaadin.tatu.BeanTable.FocusBehavior;
 
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
@@ -33,6 +34,7 @@ public class View extends VerticalLayout {
         setSizeFull();
         BeanTable<MonthlyExpense> table = new BeanTable<>();
         table.setHtmlAllowed(true);
+        table.setFocusBehavior(FocusBehavior.BODY);
         table.addColumn("Year", MonthlyExpense::getYear)
                 .setClassNameProvider(
                         item -> item.getYear() % 10 == 0 ? "millenium" : "")
@@ -86,6 +88,8 @@ public class View extends VerticalLayout {
             newData.setText("Add " + nextYear);
         });
         RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
+
+        table.focus();
         add(plus, minus, table, newData, lazy);
     }
 

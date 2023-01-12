@@ -72,7 +72,7 @@ public class BeanTableTest {
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
             Assert.assertEquals("tr", row.getTag());
-            Assert.assertEquals(""+(index+2), row.getAttribute("aria-rowindex"));
+            Assert.assertEquals(""+(index+1), row.getAttribute("aria-rowindex"));
             Assert.assertEquals(2, row.getChildCount());
             Assert.assertEquals("th", row.getChild(0).getTag());
             Assert.assertEquals("rowheader", row.getChild(0).getAttribute("role"));
@@ -127,7 +127,7 @@ public class BeanTableTest {
         Assert.assertEquals("City",
                 table.headerElement.getChild(0).getChild(6).getText());
 
-        Assert.assertEquals("20",
+        Assert.assertEquals("109",
                 table.getElement().getAttribute("aria-rowcount"));
         Assert.assertEquals(20, table.bodyElement.getChildCount());
 
@@ -142,6 +142,8 @@ public class BeanTableTest {
 
         table.setPage(2);
         
+        Assert.assertEquals("41",
+                table.bodyElement.getChild(0).getAttribute("aria-rowindex"));
         Assert.assertEquals("Layla",
                 table.bodyElement.getChild(0).getChild(0).getText());
         Assert.assertEquals("Harmon",
@@ -154,8 +156,6 @@ public class BeanTableTest {
         dp.setFilter("ben");
         fakeClientCommunication();
 
-        Assert.assertEquals("3",
-                table.getElement().getAttribute("aria-rowcount"));
         Assert.assertEquals(3, table.bodyElement.getChildCount());
         Assert.assertEquals(3, count);
         Assert.assertEquals(0,  table.getPage());

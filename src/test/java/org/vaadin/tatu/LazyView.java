@@ -1,10 +1,7 @@
 package org.vaadin.tatu;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
+import org.vaadin.tatu.BeanTable.FocusBehavior;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.notification.Notification;
@@ -23,6 +20,7 @@ public class LazyView extends VerticalLayout {
         setSizeFull();
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
+        table.setFocusBehavior(FocusBehavior.BODY_AND_HEADER);
         table.setColumns("firstName", "lastName", "age", "phoneNumber",
                 "maritalStatus");
         table.addColumn("Postal Code",
@@ -49,6 +47,11 @@ public class LazyView extends VerticalLayout {
         filter.setValueChangeMode(ValueChangeMode.LAZY);
         filter.addValueChangeListener(event -> {
             dp.setFilter(event.getValue());
+            if (!event.getValue().isEmpty()) {
+                table.setCaption("Filtered results " + table.getRowCount());
+            } else {
+                table.setCaption(null);
+            }
         });
         dataView.addItemCountChangeListener(event -> {
             Notification.show("Count: " + event.getItemCount());

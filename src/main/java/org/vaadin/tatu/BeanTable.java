@@ -14,6 +14,7 @@ import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.Focusable;
 import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
@@ -104,6 +105,7 @@ public class BeanTable<T> extends HtmlComponent
     private BeanTableLazyDataView<T> lazyDataView;
     private Random rand = new Random();
     private BeanTableI18n i18n;
+    private FocusBehavior focusBehavior = FocusBehavior.NONE;
 
     Element captionElement;
     Element headerElement;
@@ -390,9 +392,15 @@ public class BeanTable<T> extends HtmlComponent
                 if (column.isRowHeader()) {
                     cell = new Element("th");
                     cell.setAttribute("role", "rowheader");
+                    if (focusBehavior == FocusBehavior.BODY_AND_HEADER) {
+                        cell.setAttribute("tabindex", "0");
+                    }
                 } else {
                     cell = new Element("td");
                     cell.setAttribute("role", "cell");
+                    if (focusBehavior != FocusBehavior.NONE) {
+                        cell.setAttribute("tabindex", "0");
+                    }
                 }
                 if (column.getAlignment() != null) {
                     cell.getStyle().set("text-align",
@@ -463,7 +471,6 @@ public class BeanTable<T> extends HtmlComponent
     public BeanTable() {
         setClassName("bean-table");
         getElement().setAttribute("role", "table");
-        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
         headerElement = new Element("thead");
         headerElement.setAttribute("role", "rowgroup");
         footerElement = new Element("tfoot");
@@ -472,6 +479,11 @@ public class BeanTable<T> extends HtmlComponent
         getElement().appendChild(headerElement);
         getElement().appendChild(bodyElement);
         getElement().appendChild(footerElement);
+        captionElement = new Element("caption");
+        String id = randomId("label", 8);
+        captionElement.setAttribute("id", id);
+        getElement().setAttribute("aria-labelledby", id);
+        getElement().appendChild(captionElement);
     }
 
     /**
@@ -489,7 +501,6 @@ public class BeanTable<T> extends HtmlComponent
     public BeanTable(int pageLength) {
         this();
         this.pageLength = pageLength;
-        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
     }
 
     /**
@@ -563,7 +574,6 @@ public class BeanTable<T> extends HtmlComponent
             int pageLength) {
         this(beanType, autoCreateColumns);
         this.pageLength = pageLength;
-        getElement().setAttribute("aria-rowcount", String.valueOf(pageLength));
     }
 
     /**
@@ -672,7 +682,6 @@ public class BeanTable<T> extends HtmlComponent
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
         rowElement.setAttribute("role", "row");
-        rowElement.setAttribute("aria-rowindex", "1");
         columns.forEach(column -> {
             Element cell = new Element("th");
             cell.setAttribute("role", "columnheader");
@@ -680,6 +689,9 @@ public class BeanTable<T> extends HtmlComponent
                 cell.appendChild(column.getHeader().getElement());
             }
             cell.getStyle().set("width", column.getWidth());
+            if (focusBehavior == FocusBehavior.BODY_AND_HEADER) {
+                cell.setAttribute("tabindex", "0");
+            }
             rowElement.appendChild(cell);
         });
         headerElement.appendChild(rowElement);
@@ -712,24 +724,28 @@ public class BeanTable<T> extends HtmlComponent
                 if (currentPage != 0) {
                     currentPage = 0;
                     getDataProvider().refreshAll();
+                    focus();
                 }
             });
             next.addClickListener(event -> {
                 if (currentPage < lastPage) {
                     currentPage++;
                     getDataProvider().refreshAll();
+                    focus();
                 }
             });
             previous.addClickListener(event -> {
                 if (currentPage > 0) {
                     currentPage--;
                     getDataProvider().refreshAll();
+                    focus();
                 }
             });
             last.addClickListener(event -> {
                 if (currentPage != lastPage) {
                     currentPage = lastPage;
                     getDataProvider().refreshAll();
+                    focus();
                 }
             });
             updateTooltips(first, previous, next, last);
@@ -737,11 +753,14 @@ public class BeanTable<T> extends HtmlComponent
             div.addClassName("bean-table-paging");
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
-            spacer.setText((currentPage + 1) + "/" + (lastPage + 1));
+            if (focusBehavior != focusBehavior.NONE) {
+                spacer.getElement().setAttribute("tabindex", "0");
+            }
             if (i18n != null && i18n.getPageProvider() != null) {
-                spacer.getElement().setAttribute("aria-label",
-                        i18n.getPageProvider().apply(currentPage + 1,
-                                lastPage + 1));
+                spacer.setText(i18n.getPageProvider().apply(currentPage + 1,
+                        lastPage + 1));
+            } else {
+                spacer.setText((currentPage + 1) + "/" + (lastPage + 1));
             }
             div.add(first, previous, spacer, next, last);
             cell.appendChild(div.getElement());
@@ -811,7 +830,7 @@ public class BeanTable<T> extends HtmlComponent
     private void addRow(RowItem<T> rowItem, int index) {
         rows.add(rowItem);
         rowItem.getRowElement().setAttribute("aria-rowindex",
-                String.valueOf(index + 2));
+                String.valueOf(index + 1));
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
@@ -848,12 +867,17 @@ public class BeanTable<T> extends HtmlComponent
             getDataProvider().fetch(query).map(row -> createRow((T) row))
                     .forEach(rowItem -> {
                         addRow((BeanTable<T>.RowItem<T>) rowItem,
-                                itemCounter.get());
+                                (currentPage * pageLength) + itemCounter.get());
                         itemCounter.incrementAndGet();
                     });
             lastFetchedDataSize = itemCounter.get();
-            getElement().setAttribute("aria-rowcount",
-                    String.valueOf(lastFetchedDataSize));
+            if (pageLength < 0) {
+                getElement().setAttribute("aria-rowcount",
+                        String.valueOf(lastFetchedDataSize));
+            } else {
+                getElement().setAttribute("aria-rowcount",
+                        String.valueOf(dataProviderSize));
+            }
             if (sizeRequest == null) {
                 sizeRequest = ui -> {
                     fireSizeEvent();
@@ -1078,18 +1102,7 @@ public class BeanTable<T> extends HtmlComponent
      *            A string value. Null will remove caption.
      */
     public void setCaption(String caption) {
-        if (this.captionElement != null) {
-            getElement().removeChild(captionElement);
-        } else if (caption == null) {
-            getElement().removeChild(captionElement);
-        } else {
-            captionElement = new Element("caption");
-            String id = randomId("label", 8);
-            captionElement.setAttribute("id", id);
-            captionElement.setText(caption);
-            getElement().setAttribute("aria-labelledby", id);
-            getElement().appendChild(captionElement);
-        }
+        captionElement.setText(caption);
     }
 
     /**
@@ -1119,6 +1132,10 @@ public class BeanTable<T> extends HtmlComponent
         return currentPage;
     }
 
+    public int getRowCount() {
+        return Integer.valueOf(getElement().getAttribute("aria-rowcount"));
+    }
+
     /**
      * Sets the internationalization properties (texts used for button tooltips)
      * for this component.
@@ -1139,6 +1156,34 @@ public class BeanTable<T> extends HtmlComponent
      */
     public BeanTableI18n getI18n() {
         return i18n;
+    }
+
+    /**
+     * Push focus to first body cell, not row header cell.
+     */
+    public void focus() {
+        if (focusBehavior != FocusBehavior.NONE) {
+            getElement().executeJs(
+                    "setTimeout(function(){let firstTd = $0.querySelector('tr:first-child > td:first-child'); firstTd.click(); firstTd.focus(); },0)",
+                    this);
+        }
+    }
+
+    /**
+     * Set the focus behavior of this table for A11y. NONE is the default and
+     * table is skipped in focus tabbing. When BODY is used only body cells gets
+     * focus. When BODY_AND_HEADER is used also header cells get focus.
+     * 
+     * @param focusBehavior
+     *            FocusBehavior
+     */
+    public void setFocusBehavior(FocusBehavior focusBehavior) {
+        this.focusBehavior = focusBehavior == null ? FocusBehavior.NONE
+                : focusBehavior;
+    }
+
+    public enum FocusBehavior {
+        NONE, BODY, BODY_AND_HEADER;
     }
 
     public static class BeanTableI18n implements Serializable {

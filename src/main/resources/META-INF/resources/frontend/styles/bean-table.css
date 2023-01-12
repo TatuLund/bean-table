@@ -7,8 +7,24 @@
     border: 1px solid var(--lumo-contrast-20pct)
 }
 
+.bean-table td:focus {
+    box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
+    outline: unset;
+}
+
+
+.bean-table th:focus {
+    box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
+    outline: unset;
+}
+
 .bean-table th {
     border: 1px solid var(--lumo-contrast-20pct)
+}
+
+.bean-table-page:focus {
+    box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
+    outline: unset;
 }
 
 .bean-table {
