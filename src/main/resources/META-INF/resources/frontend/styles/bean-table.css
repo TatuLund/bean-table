@@ -3,8 +3,44 @@
     background: var(--lumo-contrast-5pct);
 }
 
-.bean-table td {
-    border: 1px solid var(--lumo-contrast-20pct)
+.bean-table[theme~="padding"] thead th {
+	padding-top: var(--lumo-space-s);
+    padding-bottom: var(--lumo-space-s);
+	padding-left: var(--lumo-space-xs);
+	padding-right: var(--lumo-space-xs);
+}
+
+.bean-table[theme~="padding"] tbody td {
+	padding-left: var(--lumo-space-s);
+    padding-right: var(--lumo-space-s);
+}
+
+.bean-table tbody td {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.bean-table tbody th {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.bean-table[theme~="wrap-cell-content"] tbody td {
+	white-space: normal;
+}
+
+.bean-table[theme~="wrap-cell-content"] tbody th {
+	white-space: normal;
+}
+
+.bean-table:not([theme~="no-row-borders"]) td {
+    border-top: 1px solid var(--lumo-contrast-20pct);
+    border-bottom: 1px solid var(--lumo-contrast-20pct);
+}
+
+.bean-table[theme~="column-borders"] td {
+    border-right: 1px solid var(--lumo-contrast-20pct);
+    border-left: 1px solid var(--lumo-contrast-20pct);
 }
 
 .bean-table td:focus {
@@ -12,14 +48,27 @@
     outline: unset;
 }
 
+.bean-table:not([theme~="no-border"]) {
+	border: 1px solid var(--lumo-contrast-20pct);
+} 
 
 .bean-table th:focus {
     box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
     outline: unset;
 }
 
-.bean-table th {
-    border: 1px solid var(--lumo-contrast-20pct)
+.bean-table:not([theme~="no-row-borders"]) th {
+    border-top: 1px solid var(--lumo-contrast-20pct);
+    border-bottom: 1px solid var(--lumo-contrast-20pct);
+}
+
+.bean-table[theme~="column-borders"] th {
+    border-right: 1px solid var(--lumo-contrast-20pct);
+    border-left: 1px solid var(--lumo-contrast-20pct);
+}
+
+.bean-table[theme~="row-stripes"] tbody tr:not(.even) {
+	background: var(--lumo-contrast-5pct);
 }
 
 .bean-table-page:focus {

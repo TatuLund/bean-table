@@ -8,14 +8,15 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.DetachEvent;
-import com.vaadin.flow.component.Focusable;
 import com.vaadin.flow.component.HasSize;
+import com.vaadin.flow.component.HasTheme;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
@@ -64,10 +65,10 @@ import com.vaadin.flow.shared.Registration;
  * 
  * A11y supported.
  * 
- * Currently only minimal styling included, no scrolling, etc. provided.
+ * Theme variants for stripes, padding, wrapping, border styles provided.
  * 
  * Component has css class name "bean-table" and custom css can be applied with
- * it.
+ * it. Furthermore there is class name provider API.
  * 
  * @author Tatu Lund
  *
@@ -80,7 +81,7 @@ import com.vaadin.flow.shared.Registration;
 public class BeanTable<T> extends HtmlComponent
         implements HasListDataView<T, BeanTableListDataView<T>>,
         HasDataView<T, Void, BeanTableDataView<T>>,
-        HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasSize {
+        HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasSize, HasTheme {
 
     private final KeyMapper<T> keyMapper = new KeyMapper<>(this::getItemId);
     private final AtomicReference<DataProvider<T, ?>> dataProvider = new AtomicReference<>(
@@ -831,6 +832,9 @@ public class BeanTable<T> extends HtmlComponent
         rows.add(rowItem);
         rowItem.getRowElement().setAttribute("aria-rowindex",
                 String.valueOf(index + 1));
+        if (index % 2 == 0) {
+            rowItem.getRowElement().getClassList().add("even");
+        }
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
@@ -1184,6 +1188,30 @@ public class BeanTable<T> extends HtmlComponent
 
     public enum FocusBehavior {
         NONE, BODY, BODY_AND_HEADER;
+    }
+
+    /**
+     * Adds theme variants to the component.
+     *
+     * @param variants
+     *            theme variants to add
+     */
+    public void addThemeVariants(BeanTableVariant... variants) {
+        getThemeNames().addAll(
+                Stream.of(variants).map(BeanTableVariant::getVariantName)
+                        .collect(Collectors.toList()));
+    }
+
+    /**
+     * Removes theme variants from the component.
+     *
+     * @param variants
+     *            theme variants to remove
+     */
+    public void removeThemeVariants(BeanTableVariant... variants) {
+        getThemeNames().removeAll(
+                Stream.of(variants).map(BeanTableVariant::getVariantName)
+                        .collect(Collectors.toList()));
     }
 
     public static class BeanTableI18n implements Serializable {
