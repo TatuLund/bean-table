@@ -1,0 +1,7 @@
+vaadin-text-field[theme~="centered"]::part(label) {
+	align-self: center;
+}
+
+vaadin-multi-select-combo-box[theme~="centered"]::part(label) {
+	align-self: center;
+}
