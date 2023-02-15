@@ -6,21 +6,20 @@ import java.util.List;
 import org.vaadin.tatu.BeanTable.ColumnAlignment;
 import org.vaadin.tatu.BeanTable.FocusBehavior;
 
+import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.shared.Registration;
 
-@CssImport("./styles.css")
 @Route("")
 public class View extends VerticalLayout {
 
@@ -70,18 +69,19 @@ public class View extends VerticalLayout {
         // table.setColumns("year","month","expenses");
         data = getData(25);
         dataView = table.setItems(data);
-        Button plus = new Button("+");
-        Button minus = new Button("-");
+        MyButton plus = new MyButton("+");
+        MyButton minus = new MyButton("-");
         dataView.setFilter(expense -> expense.getYear() == year);
-        plus.addClickListener(event -> {
+        plus.addSingleClickListener(event -> {
             year++;
             dataView.setFilter(expense -> expense.getYear() == year);
         });
-        minus.addClickListener(event -> {
+        minus.addSingleClickListener(event -> {
             year--;
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
+
         Button newData = new Button("Add " + nextYear);
         newData.addClickListener(event -> {
             dataView.addItems(getNewData(nextYear++));
@@ -192,4 +192,32 @@ public class View extends VerticalLayout {
 
     }
 
+    class MyButton extends Button {
+
+        public MyButton(String caption) {
+            super(caption);
+            this.addClickListener(e -> {
+                if (e.getClickCount() == 1) {
+                    setEnabled(false);
+                    try {
+                        fireEvent(new SingleClickEvent(this, true));
+                    } finally {
+                        setEnabled(true);
+                    }
+                }
+            });
+        }
+
+        public Registration addSingleClickListener(
+                ComponentEventListener<SingleClickEvent> listener) {
+            return addListener(SingleClickEvent.class, listener);
+        }
+
+    }
+
+    public static class SingleClickEvent extends ComponentEvent<MyButton> {
+        public SingleClickEvent(MyButton source, boolean isFromClient) {
+            super(source, isFromClient);
+        }
+    }
 }

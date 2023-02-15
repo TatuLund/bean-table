@@ -5,3 +5,4 @@ vaadin-text-field[theme~="centered"]::part(label) {
 vaadin-multi-select-combo-box[theme~="centered"]::part(label) {
 	align-self: center;
 }
+

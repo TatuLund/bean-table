@@ -24,6 +24,8 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -112,6 +114,8 @@ public class BeanTable<T> extends HtmlComponent
     Element headerElement;
     Element bodyElement;
     Element footerElement;
+    ContextMenu menu;
+    Button menuButton = new Button(VaadinIcon.MENU.create());
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -162,6 +166,8 @@ public class BeanTable<T> extends HtmlComponent
         private ColumnAlignment columnAlignment;
         private String width;
         private boolean rowHeader;
+        private boolean visible = true;
+        private MenuItem menuItem;
 
         /**
          * Constructor with header and value provider
@@ -355,6 +361,40 @@ public class BeanTable<T> extends HtmlComponent
         public boolean isRowHeader() {
             return rowHeader;
         }
+
+        /**
+         * Set the column visibility.
+         * 
+         * @param visible
+         *            Boolean value
+         * @return Column for chaining
+         */
+        public Column<R> setVisible(boolean visible) {
+            this.visible = visible;
+            if (BeanTable.this.isAttached()) {
+                updateHeader();
+                reset(false);
+            }
+            menuItem.setChecked(visible);
+            return this;
+        }
+
+        void updateVisible(boolean visible) {
+            this.visible = visible;
+        }
+
+        void setMenuItem(MenuItem menuItem) {
+            this.menuItem = menuItem;
+        }
+
+        /**
+         * Return status of the column visibility.
+         * 
+         * @return Boolean value.
+         */
+        public boolean isVisible() {
+            return visible;
+        }
     }
 
     /**
@@ -382,6 +422,10 @@ public class BeanTable<T> extends HtmlComponent
         }
 
         private void createCells() {
+            Element indexCell = new Element("td");
+            indexCell.getClassList().add("index");
+            rowElement.appendChild(indexCell);
+
             columns.forEach(column -> {
                 if (column.getComponentProvider() == null
                         && column.getValueProvider() == null) {
@@ -402,6 +446,9 @@ public class BeanTable<T> extends HtmlComponent
                     if (focusBehavior != FocusBehavior.NONE) {
                         cell.setAttribute("tabindex", "0");
                     }
+                }
+                if (!column.isVisible()) {
+                    cell.getStyle().set("display", "none");
                 }
                 if (column.getAlignment() != null) {
                     cell.getStyle().set("text-align",
@@ -485,6 +532,10 @@ public class BeanTable<T> extends HtmlComponent
         captionElement.setAttribute("id", id);
         getElement().setAttribute("aria-labelledby", id);
         getElement().appendChild(captionElement);
+        menu = new ContextMenu();
+        menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+        menuButton.addClassName("menu-button");
+        menuButton.setVisible(false);
     }
 
     /**
@@ -683,18 +734,52 @@ public class BeanTable<T> extends HtmlComponent
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
         rowElement.setAttribute("role", "row");
+        Element indexCell = new Element("th");
+        indexCell.getClassList().add("index");
+        indexCell.setText("#");
+        rowElement.appendChild(indexCell);
+        menu.removeAll();
+        AtomicInteger index = new AtomicInteger(0);
         columns.forEach(column -> {
+            int i = index.get();
             Element cell = new Element("th");
             cell.setAttribute("role", "columnheader");
             if (column.getHeader() != null) {
                 cell.appendChild(column.getHeader().getElement());
+                MenuItem item = menu
+                        .addItem(column.getHeader().getElement().getText());
+                column.setMenuItem(item);
+                item.setCheckable(true);
+                item.setChecked(true);
+                item.addClickListener(e -> {
+                    if (!item.isChecked()) {
+                        cell.getStyle().set("display", "none");
+                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
+                                .getStyle().set("display", "none"));
+                        column.updateVisible(false);
+                    } else {
+                        cell.getStyle().set("display", "table-cell");
+                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
+                                .getStyle().set("display", "table-cell"));
+                        column.updateVisible(true);
+                    }
+                });
+                item.getElement().getStyle().set("font-size",
+                        "var(--lumo-font-size-m)");
+                item.getElement().getStyle().set("padding", "0px");
             }
             cell.getStyle().set("width", column.getWidth());
             if (focusBehavior == FocusBehavior.BODY_AND_HEADER) {
                 cell.setAttribute("tabindex", "0");
             }
+            if (!column.isVisible()) {
+                cell.getStyle().set("display", "none");
+            }
             rowElement.appendChild(cell);
+            index.incrementAndGet();
         });
+        rowElement.getChildren().reduce((first, second) -> second).orElse(null)
+                .appendChild(menuButton.getElement());
         headerElement.appendChild(rowElement);
     }
 
@@ -703,12 +788,11 @@ public class BeanTable<T> extends HtmlComponent
         if (dataProviderSize > 0) {
             Element rowElement = new Element("tr");
             Element cell = new Element("td");
-            cell.setAttribute("colspan", "" + columns.size());
+            cell.setAttribute("colspan", "" + (columns.size() + 1));
             rowElement.appendChild(cell);
             Button first = new Button();
             first.setIcon(VaadinIcon.ANGLE_DOUBLE_LEFT.create());
             first.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            first.addThemeVariants(ButtonVariant.LUMO_ICON);
             Button previous = new Button();
             previous.setIcon(VaadinIcon.ANGLE_LEFT.create());
             previous.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
@@ -773,14 +857,10 @@ public class BeanTable<T> extends HtmlComponent
             Button last) {
         if (i18n != null) {
             first.setTooltipText(i18n.getFirstPage());
-            first.getElement().setAttribute("aria-label", i18n.getFirstPage());
             last.setTooltipText(i18n.getLastPage());
-            last.getElement().setAttribute("aria-label", i18n.getLastPage());
             previous.setTooltipText(i18n.getPreviousPage());
-            previous.getElement().setAttribute("aria-label",
-                    i18n.getPreviousPage());
             next.setTooltipText(i18n.getNextPage());
-            next.getElement().setAttribute("aria-label", i18n.getNextPage());
+            menuButton.setTooltipText(i18n.getMenuButton());
         }
     }
 
@@ -830,6 +910,7 @@ public class BeanTable<T> extends HtmlComponent
 
     private void addRow(RowItem<T> rowItem, int index) {
         rows.add(rowItem);
+        rowItem.getRowElement().getChild(0).setText("" + (index + 1));
         rowItem.getRowElement().setAttribute("aria-rowindex",
                 String.valueOf(index + 1));
         if (index % 2 == 0) {
@@ -1190,6 +1271,10 @@ public class BeanTable<T> extends HtmlComponent
         NONE, BODY, BODY_AND_HEADER;
     }
 
+    public enum ColumnSelectMenu {
+        NONE, CONTEXT, BUTTON;
+    }
+
     /**
      * Adds theme variants to the component.
      *
@@ -1214,11 +1299,35 @@ public class BeanTable<T> extends HtmlComponent
                         .collect(Collectors.toList()));
     }
 
+    /**
+     * Use ColumnSelectMenu.CONTEXT column selection as context menu. Use
+     * ColumnSelectMenu.BUTTON to column selection button to open the menu in
+     * the last header cell.
+     * 
+     * @param columnSelect
+     *            ColumnSelectMenu
+     */
+    public void setColumnSelectionMenu(ColumnSelectMenu columnSelect) {
+        if (columnSelect == ColumnSelectMenu.BUTTON) {
+            menu.setTarget(menuButton);
+            menu.setOpenOnClick(true);
+            menuButton.setVisible(true);
+        } else if (columnSelect == ColumnSelectMenu.CONTEXT) {
+            menu.setTarget(this);
+            menu.setOpenOnClick(false);
+            menuButton.setVisible(false);
+        } else {
+            menu.setTarget(null);
+            menuButton.setVisible(false);
+        }
+    }
+
     public static class BeanTableI18n implements Serializable {
         private String lastPage;
         private String previousPage;
         private String nextPage;
         private String firstPage;
+        private String menuButton;
         private SerializableBiFunction<Integer, Integer, String> pageProvider;
 
         public String getLastPage() {
@@ -1257,6 +1366,14 @@ public class BeanTable<T> extends HtmlComponent
             return this.pageProvider;
         }
 
+        public String getMenuButton() {
+            return menuButton;
+        }
+
+        public void setMenuButton(String menuButton) {
+            this.menuButton = menuButton;
+        }
+
         public void setPageProvider(
                 SerializableBiFunction<Integer, Integer, String> provider) {
             this.pageProvider = provider;
@@ -1268,6 +1385,7 @@ public class BeanTable<T> extends HtmlComponent
             english.setNextPage("Next page");
             english.setLastPage("Last page");
             english.setPreviousPage("Previous page");
+            english.setMenuButton("Column selector");
             english.setPageProvider((currentPage, lastPage) -> "Page "
                     + currentPage + " of " + lastPage);
             return english;

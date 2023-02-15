@@ -20,6 +20,19 @@
 	text-overflow: ellipsis;
 }
 
+.bean-table .index {
+	display: none;
+}
+
+.bean-table td.index {
+    background: var(--lumo-contrast-5pct);
+}
+
+.bean-table[theme~="row-index"] .index {
+	display: table-cell;
+    font-weight: 700;
+}
+
 .bean-table tbody th {
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -106,4 +119,9 @@
     padding-right: 1em;
     padding-bottom: 0.5em;	
     margin-left: calc(var(--lumo-border-radius-m) / 4);    
+}
+
+.bean-table .menu-button {
+	position: fixed;
+	right: 20px;
 }

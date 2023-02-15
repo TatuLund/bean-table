@@ -6,6 +6,7 @@ public enum BeanTableVariant {
     COLUMN_BORDERS("column-borders"),
     ROW_STRIPES("row-stripes"),
     PADDING("padding"),
+    ROW_INDEX("row-index"),
     WRAP_CELL_CONTENT("wrap-cell-content");
 
     private final String variant;

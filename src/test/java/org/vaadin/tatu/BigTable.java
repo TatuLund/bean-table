@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
+import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
+
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
@@ -36,7 +38,8 @@ public class BigTable extends Div {
         table.addColumn("Sum", map -> map.get("sum"));
 
         table.setItems(dataProvider);
-
+        table.setColumnSelectionMenu(ColumnSelectMenu.CONTEXT);
+        
         add(table);
     }
 

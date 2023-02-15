@@ -1,9 +1,11 @@
 package org.vaadin.tatu;
 
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
+import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
 import org.vaadin.tatu.BeanTable.FocusBehavior;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -46,6 +48,7 @@ public class LazyView extends VerticalLayout {
         BeanTableDataView<Person> dataView = table.setItems(dp);
 
         table.setWidthFull();
+        table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
 
         TextField filter = new TextField("Filter");
         filter.setValueChangeMode(ValueChangeMode.LAZY);
@@ -66,6 +69,12 @@ public class LazyView extends VerticalLayout {
             table.setPage(2);
         });
 
+        Checkbox phoneNumber = new Checkbox("Phone Number");
+        phoneNumber.setValue(true);
+        phoneNumber.addValueChangeListener(e -> {
+            table.getColumn("phoneNumber").ifPresent(col -> col.setVisible(e.getValue()));
+        });
+
         MultiSelectComboBox<BeanTableVariant> variants = new MultiSelectComboBox<>(
                 "Variants");
         variants.setItems(BeanTableVariant.values());
@@ -77,7 +86,7 @@ public class LazyView extends VerticalLayout {
 
         HorizontalLayout tools = new HorizontalLayout();
         tools.addClassName(LumoUtility.AlignItems.BASELINE);
-        tools.add(filter, variants, button);
+        tools.add(filter, variants, button, phoneNumber);
 
         RouterLink big = new RouterLink("Big table demo", BigTable.class);
 
