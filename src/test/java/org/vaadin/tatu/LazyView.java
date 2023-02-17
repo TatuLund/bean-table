@@ -1,12 +1,22 @@
 package org.vaadin.tatu;
 
-import java.util.List;
-import java.util.stream.Stream;
+import org.vaadin.gatanaso.MultiselectComboBox;
+import org.vaadin.tatu.BeanTable.BeanTableI18n;
+import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
+import org.vaadin.tatu.BeanTable.FocusBehavior;
 
+import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.data.provider.ConfigurableFilterDataProviderWrapper;
+import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.CallbackDataProvider;
+import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
+import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
 
 @Route("lazy")
 public class LazyView extends VerticalLayout {
@@ -15,49 +25,68 @@ public class LazyView extends VerticalLayout {
         setSizeFull();
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
-        DataProvider<Person, ?> dataProvider = DataProvider.fromCallbacks(
-                query -> personService
-                        .fetch(query.getOffset(), query.getLimit()).stream(),
-                query -> personService.count());
-        table.setColumns("firstName","lastName","age","phoneNumber","maritalStatus");
-        table.addColumn("Postal Code",person -> person.getAddress() == null ? "" : person.getAddress().getPostalCode());
-        table.addColumn("City",person -> person.getAddress() == null ? "" : person.getAddress().getCity());
-        table.setDataProvider(dataProvider);
+        table.setFocusBehavior(FocusBehavior.BODY_AND_HEADER);
+        table.setColumns("firstName", "lastName", "age", "phoneNumber",
+                "maritalStatus");
+        table.addColumn("Postal Code",
+                person -> person.getAddress() == null ? ""
+                        : person.getAddress().getPostalCode());
+        table.addColumn("City", person -> person.getAddress() == null ? ""
+                : person.getAddress().getCity());
+        table.setI18n(BeanTableI18n.getDefault());
+
+        CallbackDataProvider<Person, String> dataProvider = DataProvider
+                .fromFilteringCallbacks(
+                        query -> personService.fetch(query.getOffset(),
+                                query.getLimit(), query.getFilter()).stream(),
+                        query -> personService.count(query.getFilter()));
+
+        ConfigurableFilterDataProvider<Person, Void, String> dp = dataProvider
+                .withConfigurableFilter();
+
+        table.setDataProvider(dp);
+
         table.setWidthFull();
-        add(table);
-    }
+        table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
 
-    public class PersonService {
-        private PersonData personData = new PersonData();
-
-        public List<Person> fetch(int offset, int limit) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
+        TextField filter = new TextField("Filter");
+        filter.setValueChangeMode(ValueChangeMode.LAZY);
+        filter.addValueChangeListener(event -> {
+            dp.setFilter(event.getValue());
+            if (!event.getValue().isEmpty()) {
+                table.setCaption("Filtered results " + table.getRowCount());
+            } else {
+                table.setCaption(null);
             }
-            int end = offset + limit;
-            int size = personData.getPersons().size();
-            if (size <= end) {
-                end = size;
-            }
-            return personData.getPersons().subList(offset, end);
-        }
+        });
 
-        public Stream<Person> fetchPage(int page, int pageSize) {
-            return personData.getPersons().stream().skip(page * pageSize)
-                    .limit(pageSize);
-        }
+        Button button = new Button("Go to page 3");
+        button.addClickListener(e -> {
+            table.setPage(2);
+        });
 
-        public int count() {
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-            }
-            return personData.getPersons().size();
-        }
+        Checkbox phoneNumber = new Checkbox("Phone Number");
+        phoneNumber.setValue(true);
+        phoneNumber.addValueChangeListener(e -> {
+            table.getColumn("phoneNumber")
+                    .ifPresent(col -> col.setVisible(e.getValue()));
+        });
 
-        public List<Person> fetchAll() {
-            return personData.getPersons();
-        }
+        MultiselectComboBox<BeanTableVariant> variants = new MultiselectComboBox<>(
+                "Variants");
+        variants.setItems(BeanTableVariant.values());
+        variants.addValueChangeListener(e -> {
+            table.removeThemeVariants(BeanTableVariant.values());
+            variants.getValue()
+                    .forEach(variant -> table.addThemeVariants(variant));
+        });
+
+        HorizontalLayout tools = new HorizontalLayout();
+        tools.getElement().getStyle().set("align-items", "baseline");
+        tools.add(filter, variants, button, phoneNumber);
+
+        RouterLink big = new RouterLink("Big table demo", BigTable.class);
+
+        add(tools, table, big);
     }
 }

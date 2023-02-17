@@ -3,7 +3,14 @@ package org.vaadin.tatu;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.vaadin.tatu.BeanTable.ColumnAlignment;
+import org.vaadin.tatu.BeanTable.FocusBehavior;
+
+import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -11,63 +18,85 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.shared.Registration;
 
 @Route("")
 public class View extends VerticalLayout {
 
     int year = 2000;
     private List<MonthlyExpense> data;
-    private ListDataProvider<MonthlyExpense> dp;
     private int index = 0;
-    
+    private int nextYear = 2025;
+    ListDataProvider<MonthlyExpense> dataProvider;
+
     public View() {
         setSizeFull();
-        BeanTable<MonthlyExpense> table = new BeanTable<>(MonthlyExpense.class,false);
+        BeanTable<MonthlyExpense> table = new BeanTable<>();
         table.setHtmlAllowed(true);
-        table.addColumn("Year", MonthlyExpense::getYear).setClassNameProvider(item -> item.getYear() == 2000 ? "millenium" : "");
-        table.addColumn("Month", expense -> "<i>" + expense.getMonth() + "</i>");
-        table.addColumn("expenses");
-        table.setClassNameProvider(item -> item.getExpenses() > 400 ? "expenses" : "");
-//        table.addComponentColumn("expense", expense -> {
-//            NumberField field = new NumberField();
-//            field.setValue(expense.getExpenses());
-//            field.addValueChangeListener(event -> {
-//                expense.setExpenses(event.getValue());
-//            });
-//            return field;
-//        });
+        table.setFocusBehavior(FocusBehavior.BODY);
+        table.addColumn("Year", MonthlyExpense::getYear)
+                .setClassNameProvider(
+                        item -> item.getYear() % 10 == 0 ? "millenium" : "")
+                .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
+        table.addColumn("Month", expense -> "<i>" + expense.getMonth() + "</i>")
+                .setRowHeader(true);
+        table.addColumn("Expenses", expense -> expense.getExpenses())
+                .setTooltipProvider(item -> "Expenses of " + item.getMonth()
+                        + " were " + item.getExpenses());
+        table.setClassNameProvider(
+                item -> item.getExpenses() > 600 ? "expenses" : "");
+        table.setCaption("Monthly Expenses");
+        // table.addComponentColumn("expense", expense -> {
+        // NumberField field = new NumberField();
+        // field.setValue(expense.getExpenses());
+        // field.addValueChangeListener(event -> {
+        // expense.setExpenses(event.getValue());
+        // });
+        // return field;
+        // });
         table.addComponentColumn(null, expense -> {
-           Button edit = new Button("edit");
-           edit.addClickListener(event -> {
-              Dialog dialog = new Dialog();
-              index = data.indexOf(expense);
-              dialog.add(createForm());
-              dialog.open();
-           });
-           return edit;
-        });
-//        table.setColumns("year","month","expenses");
+            Button edit = new Button("edit");
+            edit.addThemeVariants(ButtonVariant.LUMO_SMALL);
+            edit.addClickListener(event -> {
+                Dialog dialog = new Dialog();
+                index = data.indexOf(expense);
+                dialog.add(createForm());
+                dialog.open();
+            });
+            return edit;
+        }).setHeader(new Html("<span style='color: blue'>Edit</span>"))
+                .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
+        // table.setColumns("year","month","expenses");
         data = getData(25);
         table.setItems(data);
-        Button plus = new Button("+");
-        Button minus = new Button("-");
-        dp = (ListDataProvider<MonthlyExpense>) table.getDataProvider();
-        dp.setFilter(expense -> expense.getYear() == year);
-        plus.addClickListener(event -> {
+
+        MyButton plus = new MyButton("+");
+        MyButton minus = new MyButton("-");
+        dataProvider = (ListDataProvider<MonthlyExpense>) table
+                .getDataProvider();
+        dataProvider.setFilter(expense -> expense.getYear() == year);
+
+        plus.addSingleClickListener(event -> {
             year++;
-            dp.setFilter(expense -> expense.getYear() == year);
+            dataProvider.setFilter(expense -> expense.getYear() == year);
         });
-        minus.addClickListener(event -> {
+        minus.addSingleClickListener(event -> {
             year--;
-            dp.setFilter(expense -> expense.getYear() == year);
+            dataProvider.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
-        Button newData = new Button("new");
+
+        Button newData = new Button("Add " + nextYear);
         newData.addClickListener(event -> {
-            data = getData(1);
-            table.setItems(data);
+            data.addAll(getNewData(nextYear++));
+            dataProvider.refreshAll();
+            newData.setText("Add " + nextYear);
         });
-        add(plus,minus,table,newData);        
+        RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
+
+        table.focus();
+        add(plus, minus, table, newData, lazy);
     }
 
     private HorizontalLayout createForm() {
@@ -75,24 +104,26 @@ public class View extends VerticalLayout {
         Button plus = new Button("+");
         Button minus = new Button("-");
         Button save = new Button("Save");
-        Span year = new Span(); 
-        Span month = new Span(); 
+        Span year = new Span();
+        Span month = new Span();
         NumberField expenseField = new NumberField();
         populateForm(year, month, expenseField);
         plus.addClickListener(event -> {
-            if (index < data.size()) index++;
+            if (index < data.size())
+                index++;
             populateForm(year, month, expenseField);
         });
         minus.addClickListener(event -> {
-            if (index > 0) index--;
+            if (index > 0)
+                index--;
             populateForm(year, month, expenseField);
         });
         save.addClickListener(event -> {
-           data.get(index).setExpenses(expenseField.getValue());
-           dp.refreshItem(data.get(index));
+            data.get(index).setExpenses(expenseField.getValue());
+            dataProvider.refreshItem(data.get(index));
         });
         layout.setWidthFull();
-        layout.add(plus,minus,year,month,expenseField,save);
+        layout.add(plus, minus, year, month, expenseField, save);
         return layout;
     }
 
@@ -106,7 +137,7 @@ public class View extends VerticalLayout {
     public List<MonthlyExpense> getData(int years) {
         String[] monthNames = new java.text.DateFormatSymbols().getMonths();
         List<MonthlyExpense> data = new ArrayList<>();
-        for (int year = 2000; year < (2000+years); year++) {
+        for (int year = 2000; year < (2000 + years); year++) {
             for (int month = 0; month < 12; month++) {
                 data.add(new MonthlyExpense(monthNames[month], year,
                         getExpenses()));
@@ -115,7 +146,17 @@ public class View extends VerticalLayout {
         return data;
     }
 
-    public  Double getExpenses() {
+    public List<MonthlyExpense> getNewData(int year) {
+        String[] monthNames = new java.text.DateFormatSymbols().getMonths();
+        List<MonthlyExpense> data = new ArrayList<>();
+        for (int month = 0; month < 12; month++) {
+            data.add(
+                    new MonthlyExpense(monthNames[month], year, getExpenses()));
+        }
+        return data;
+    }
+
+    public Double getExpenses() {
         return Math.floor((Math.random() * 1000) % 500 + 300);
     }
 
@@ -157,4 +198,32 @@ public class View extends VerticalLayout {
 
     }
 
+    class MyButton extends Button {
+
+        public MyButton(String caption) {
+            super(caption);
+            this.addClickListener(e -> {
+                if (e.getClickCount() == 1) {
+                    setEnabled(false);
+                    try {
+                        fireEvent(new SingleClickEvent(this, true));
+                    } finally {
+                        setEnabled(true);
+                    }
+                }
+            });
+        }
+
+        public Registration addSingleClickListener(
+                ComponentEventListener<SingleClickEvent> listener) {
+            return addListener(SingleClickEvent.class, listener);
+        }
+
+    }
+
+    public static class SingleClickEvent extends ComponentEvent<MyButton> {
+        public SingleClickEvent(MyButton source, boolean isFromClient) {
+            super(source, isFromClient);
+        }
+    }
 }
