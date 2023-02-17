@@ -10,6 +10,22 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### 1.3.0
+- Backport features from 2.8.0
+- Added menu for column visibility selection
+- Added API to control column visibility
+- Added row index variant
+- Added theme variants for stripes, bordering, padding and wrapping
+- Added cell focus behaviors, which are useful with A11y. By default no focus behavior.
+- Add A11y features for screenreader friendliness
+- Add getPage / setPage
+- Fixed issue page not being adjusted when filtering
+- Added Tooltip support for table cells and paging buttons
+- Added Column width API
+- Added Column alignment API
+- Added getters for the Column and List
+- Added setHeader(Component) overloading to set component instead of text in header. Hint: use Html component for adding html content.
+
 ### 1.2.0
 - Added BeanTable#setClassNameProvider and Column#setClassNameProvider
 - Added support for Column setter chaining
