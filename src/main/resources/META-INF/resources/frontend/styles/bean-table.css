@@ -84,6 +84,10 @@
 	background: var(--lumo-contrast-5pct);
 }
 
+.bean-table tr[theme~="selected"] {
+	background: var(--lumo-primary-color-10pct) !important;
+}
+
 .bean-table-page:focus {
     box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
     outline: unset;

@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,6 +32,7 @@ public class BeanTableTest {
 
     private int count;
     private MockUI ui;
+    private Set<DataItem> selected = null;
 
     @Before
     public void init() {
@@ -41,12 +43,14 @@ public class BeanTableTest {
     public void basicBeanTable() {
         BeanTable<DataItem> table = new BeanTable<>();
         table.addColumn("Name", item -> item.getName()).setRowHeader(true);
-        table.addColumn("Data", item -> item.getData());
+        BeanTable<DataItem>.Column<DataItem> col = table.addColumn("Data",
+                item -> item.getData());
         List<DataItem> items = IntStream.range(0, 10)
                 .mapToObj(i -> new DataItem("name" + i, "data" + i))
                 .collect(Collectors.toList());
         table.setItems(items);
         table.setCaption("Items");
+        ui.add(table);
 
         Assert.assertEquals("table", table.getElement().getTag());
 
@@ -81,6 +85,24 @@ public class BeanTableTest {
         Assert.assertEquals(10, table.bodyElement.getChildCount());
         Assert.assertEquals("rowgroup", table.bodyElement.getAttribute("role"));
 
+        assertBodyStrucure(table, null);
+
+        col.setVisible(false);
+        this.fakeClientCommunication();
+
+        Assert.assertEquals("none", table.headerElement.getChild(0).getChild(2)
+                .getStyle().get("display"));
+        assertBodyStrucure(table, "none");
+
+        col.setVisible(true);
+        this.fakeClientCommunication();
+
+        Assert.assertEquals(null, table.headerElement.getChild(0).getChild(2)
+                .getStyle().get("display"));
+        assertBodyStrucure(table, null);
+    }
+
+    private void assertBodyStrucure(BeanTable<DataItem> table, String display) {
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
@@ -94,9 +116,13 @@ public class BeanTableTest {
             Assert.assertEquals("rowheader",
                     row.getChild(1).getAttribute("role"));
             Assert.assertEquals("name" + index, row.getChild(1).getText());
+            Assert.assertEquals(null,
+                    row.getChild(1).getStyle().get("display"));
             Assert.assertEquals("td", row.getChild(2).getTag());
             Assert.assertEquals("cell", row.getChild(2).getAttribute("role"));
             Assert.assertEquals("data" + index, row.getChild(2).getText());
+            Assert.assertEquals(display,
+                    row.getChild(2).getStyle().get("display"));
         });
     }
 
@@ -351,6 +377,81 @@ public class BeanTableTest {
         BeanTableI18n tableI18n = BeanTableI18n.getDefault();
         new ObjectOutputStream(new ByteArrayOutputStream())
                 .writeObject(tableI18n);
+    }
+
+    @Test
+    public void selection() {
+        BeanTable<DataItem> table = new BeanTable<>();
+        table.setHtmlAllowed(true);
+        table.addColumn("Name", item -> item.getName())
+                .setTooltipProvider(item -> item.getName());
+        table.addColumn("Data", item -> "<b>" + item.getData() + "</b>");
+        List<DataItem> items = IntStream.range(0, 10)
+                .mapToObj(i -> new DataItem("name" + i, "data" + i))
+                .collect(Collectors.toList());
+        table.setItems(items);
+
+        selected = null;
+        count = 0;
+        table.addSelectionChangedListener(event -> {
+            selected = event.getSelected();
+            Assert.assertFalse(event.isFromClient());
+            count++;
+        });
+        assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+
+        // Select four items and assert that event was fired once, assert
+        // selection
+        table.select(items.get(3), items.get(5), items.get(7), items.get(9));
+        Assert.assertEquals(1, count);
+        Assert.assertEquals(
+                Set.of(items.get(3), items.get(5), items.get(7), items.get(9)),
+                selected);
+        assertSelectedThemeSet(table, 3, 5, 7, 9);
+        assertSelectedThemeNotSet(table, 0, 1, 2, 4, 6, 8);
+
+        // Select item already in selection, assert no event fired
+        table.select(items.get(5));
+        Assert.assertEquals(1, count);
+        assertSelectedThemeSet(table, 3, 5, 7, 9);
+        assertSelectedThemeNotSet(table, 0, 1, 2, 4, 6, 8);
+
+        // De-select two item, assert that event is fired once
+        table.deselect(items.get(7), items.get(9));
+        Assert.assertEquals(2, count);
+        Assert.assertEquals(Set.of(items.get(3), items.get(5)), selected);
+        assertSelectedThemeSet(table, 3, 5);
+        assertSelectedThemeNotSet(table, 0, 1, 2, 4, 6, 7, 8, 9);
+
+        // De-select item not in selection, assert no event fired
+        table.deselect(items.get(7));
+        Assert.assertEquals(2, count);
+        assertSelectedThemeSet(table, 3, 5);
+        assertSelectedThemeNotSet(table, 0, 1, 2, 4, 6, 7, 8, 9);
+
+        // De-select all, assert that selection is empty
+        table.deselectAll();
+        Assert.assertEquals(3, count);
+        Assert.assertTrue(selected.isEmpty());
+        assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+    }
+
+    private void assertSelectedThemeSet(BeanTable<DataItem> table,
+            int... items) {
+        for (int item : items) {
+            Assert.assertEquals("item at index " + item + " should be selected",
+                    "selected",
+                    table.bodyElement.getChild(item).getAttribute("theme"));
+        }
+    }
+
+    private void assertSelectedThemeNotSet(BeanTable<DataItem> table,
+            int... items) {
+        for (int item : items) {
+            Assert.assertEquals(
+                    "item at index " + item + " should not be selected", null,
+                    table.bodyElement.getChild(item).getAttribute("theme"));
+        }
     }
 
     public class DataItem {

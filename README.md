@@ -13,6 +13,10 @@ The component has css class name "bean-table" and custom css can be applied with
 
 ## Release notes
 
+### 2.9.0
+- Added API for selection, enable, select, deselect (by default disabled)
+- Improved keyboard navigation with arrow keys, space for select
+
 ### 2.8.0
 
 - Added menu for column visibility selection

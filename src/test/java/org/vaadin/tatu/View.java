@@ -81,7 +81,7 @@ public class View extends VerticalLayout {
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
-
+        
         Button newData = new Button("Add " + nextYear);
         newData.addClickListener(event -> {
             dataView.addItems(getNewData(nextYear++));
