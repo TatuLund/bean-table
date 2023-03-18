@@ -3,13 +3,25 @@
 
 # Bean Table
 
-This is a simple Table component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out. This component does not support lazy loading of the data, thus it is purposed for the small data sets only. In other words this is designed for use cases where Grid is too heavy, overkill, etc.
+This is a simple html table based component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out.
 
-BeanTable's cells can be populated by text, html or components.
+This component does support basic support lazy loading of the data in paged mode. Non paged mode is purposed for the small data sets only. In other words this is designed for use cases where Grid is too heavy, overkill, etc.
 
-Currently only minimal styling included, no scrolling, etc. provided.
+-  The latest version attempts to add top-notch accessibility support when focus behavior is enabled.
 
-The component has css class name "bean-table" and custom css can be applied with it.
+- There is proper keyboard navigation when focus behavior is enabled.
+
+- BeanTable's cells can be populated by text, html or components. Also Tooltip provider can be applied.
+
+- There are theme variants for striped rows, padding, wrapping and border styles.
+
+- The component has css class name "bean-table" and custom css can be applied with it. CSS class name generator can be applied also.
+
+- There is rudimentary paging support for larger sets of data. This seems to work well also with accessibility.
+
+- There is selection mode for multiple rows
+
+The component seems to have better performance than Grid when using Firefox as a browser. When using Chrome, the case is the opposite by Grid rendering faster.
 
 ## Release notes
 
