@@ -25,50 +25,8 @@ The component seems to have better performance than Grid when using Firefox as a
 
 ## Release notes
 
-### 2.9.0
-- Added API for selection, enable, select, deselect (by default disabled)
-- Improved keyboard navigation with arrow keys, space for select
-
-### 2.8.0
-
-- Added menu for column visibility selection
-- Added API to control column visibility
-- Added row index variant
-
-### 2.7.0
-
-- Added theme variants for stripes, bordering, padding and wrapping
-
-### 2.6.0
-- Added cell focus behaviors, which are useful with A11y. By default no focus behavior.
-- Did some small improvements in A11y behaviors by testing the component with NVDA
-
-### 2.5.0
-- Added getPage / setPage
-- Fixed issue page not being adjusted when filtering
-
-### 2.4.1
-- Fix NPE in paged mode
- 
-### 2.4.0
-- Add A11y support
-
-### 2.3.0
-- Added tooltip support
-- Added width API for column
-- Added column alignment API
-
-### 2.2.0
-- Added getters for Column and List<Column>
-
-### 2.1.1
-- Fix issue with missing initial data reset using in-memory data, hence data not shown
-
-### 2.1.0
-- Add support for components in headers, Column#setHeader(Component)
-
-### 2.0.0 
-- First release with support for DataView API introduced in Vaadin 17
+### 3.0.0
+- First version to support Vaadin 24
 
 ## Development instructions
 
