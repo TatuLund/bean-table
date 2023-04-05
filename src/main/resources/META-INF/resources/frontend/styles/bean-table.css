@@ -1,6 +1,7 @@
 .bean-table thead {
     font-weight: 700;
     background: var(--lumo-contrast-5pct);
+	position: relative;
 }
 
 .bean-table[theme~="padding"] thead th {
@@ -126,6 +127,6 @@
 }
 
 .bean-table .menu-button {
-	position: fixed;
-	right: 20px;
+	position: absolute;
+	right: 5px;
 }

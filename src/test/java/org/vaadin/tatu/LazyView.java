@@ -26,6 +26,9 @@ public class LazyView extends VerticalLayout {
 
     public LazyView() {
         setSizeFull();
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSizeFull();
+
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
         table.setFocusBehavior(FocusBehavior.BODY_AND_HEADER);
@@ -49,8 +52,9 @@ public class LazyView extends VerticalLayout {
 
         BeanTableDataView<Person> dataView = table.setItems(dp);
 
-        table.setWidthFull();
+        table.setWidth("80%");
         table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
+        layout.add(table);
 
         TextField filter = new TextField("Filter");
         filter.setValueChangeMode(ValueChangeMode.LAZY);
@@ -108,6 +112,6 @@ public class LazyView extends VerticalLayout {
             Notification.show("Selection size: "+event.getSelected().size()+" Names: "+names);
         });
 
-        add(tools, table, big);
+        add(tools, layout, big);
     }
 }
