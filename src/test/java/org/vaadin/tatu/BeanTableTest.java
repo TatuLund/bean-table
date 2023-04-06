@@ -18,7 +18,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
-import org.vaadin.tatu.BeanTable.RowItem;
+import org.vaadin.tatu.BeanTable.Column;
 
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
@@ -56,7 +56,27 @@ public class BeanTableTest {
         table.setItems(items);
         table.setCaption("Items");
         ui.add(table);
+        
+        assertBasicTable(table, col);
+    }
 
+    @Test
+    public void recordBeanTable() {
+        BeanTable<DataRecord> table = new BeanTable<>();
+        table.addColumn("Name", item -> item.name).setRowHeader(true);
+        BeanTable<DataRecord>.Column<DataRecord> col = table.addColumn("Data",
+                item -> item.data);
+        List<DataRecord> items = IntStream.range(0, 10)
+                .mapToObj(i -> new DataRecord("name" + i, "data" + i))
+                .collect(Collectors.toList());
+        table.setItems(items);
+        table.setCaption("Items");
+        ui.add(table);
+        
+        assertBasicTable(table, col);
+    }
+
+    private void assertBasicTable(BeanTable table, Column col) {
         Assert.assertEquals("table", table.getElement().getTag());
 
         Assert.assertEquals("Items", table.captionElement.getText());
@@ -115,7 +135,7 @@ public class BeanTableTest {
         Assert.assertTrue(table.menu.getItems().get(1).isChecked());
     }
 
-    private void assertBodyStrucure(BeanTable<DataItem> table, String display) {
+    private void assertBodyStrucure(BeanTable table, String display) {
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
@@ -424,7 +444,7 @@ public class BeanTableTest {
         Assert.assertEquals(Set.of(items.get(0), items.get(2)), selected);
 
         table.rows.get(0).toggleSelection();
-    
+
         Assert.assertEquals(3, count);
         Assert.assertEquals(1, selected.size());
         Assert.assertEquals(Set.of(items.get(2)), selected);
@@ -609,6 +629,9 @@ public class BeanTableTest {
         public void setData(String data) {
             this.data = data;
         }
+    }
+
+    record DataRecord(String name, String data) {
     }
 
     private void fakeClientCommunication() {
