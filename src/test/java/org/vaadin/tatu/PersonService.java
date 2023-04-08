@@ -18,7 +18,7 @@ public class PersonService {
         if (size <= end) {
             end = size;
         }
-        if (filter.isPresent() && !filter.get().isEmpty()) {
+        if (filter != null && filter.isPresent() && !filter.get().isEmpty()) {
             return personData.getPersons().stream().filter(item -> {
                 return item.toString().toLowerCase()
                         .contains(filter.get().toLowerCase());
@@ -38,7 +38,7 @@ public class PersonService {
             Thread.sleep(200);
         } catch (InterruptedException e) {
         }
-        if (filter.isPresent() && !filter.get().isEmpty()) {
+        if (filter != null && filter.isPresent() && !filter.get().isEmpty()) {
             return personData.getPersons().stream().filter(item -> {
                 return item.toString().toLowerCase()
                         .contains(filter.get().toLowerCase());

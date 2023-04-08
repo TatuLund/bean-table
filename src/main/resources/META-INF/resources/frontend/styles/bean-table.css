@@ -1,6 +1,12 @@
 .bean-table thead {
     font-weight: 700;
     background: var(--lumo-contrast-5pct);
+	position: relative;
+	height: 30px;
+}
+
+.bean-table thead tr {
+	height: 0px;
 }
 
 .bean-table[theme~="padding"] thead th {
@@ -126,6 +132,13 @@
 }
 
 .bean-table .menu-button {
-	position: fixed;
-	right: 20px;
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    z-index: 1;
+}
+
+.bean-table[theme~="padding"] .menu-button {
+	top: var(--lumo-space-s);
+	right: var(--lumo-space-xs);
 }

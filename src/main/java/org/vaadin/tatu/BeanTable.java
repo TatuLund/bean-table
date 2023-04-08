@@ -98,7 +98,6 @@ public class BeanTable<T> extends HtmlComponent
     private SerializableConsumer<UI> sizeRequest;
     private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
-    private List<RowItem<T>> rows = new ArrayList<>();
     private boolean htmlAllowed;
     private Class<T> beanType;
     private PropertySet<T> propertySet;
@@ -118,12 +117,14 @@ public class BeanTable<T> extends HtmlComponent
     private Set<T> selected = new HashSet<>();
     private boolean selectionEnabled = false;
 
+    // Package protected to enable unit testing
     Element captionElement;
     Element headerElement;
     Element bodyElement;
     Element footerElement;
     ContextMenu menu;
     Button menuButton = new Button(VaadinIcon.MENU.create());
+    List<RowItem<T>> rows = new ArrayList<>();
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -380,8 +381,7 @@ public class BeanTable<T> extends HtmlComponent
         public Column<R> setVisible(boolean visible) {
             this.visible = visible;
             if (BeanTable.this.isAttached()) {
-                updateHeader();
-                reset(false);
+                updateColumnVisibility(this, !visible);
             }
             menuItem.setChecked(visible);
             return this;
@@ -419,11 +419,13 @@ public class BeanTable<T> extends HtmlComponent
 
     /**
      * Internal wrapper class for the rows with item data.
+     * <p>
+     * Note: Package protected for enabling unit testing
      * 
      * @param <R>
      *            Bean type
      */
-    private class RowItem<R> implements Serializable {
+    class RowItem<R> implements Serializable {
 
         private R item;
         private Element rowElement;
@@ -441,7 +443,8 @@ public class BeanTable<T> extends HtmlComponent
             }
             DomListenerRegistration clickReg = rowElement
                     .addEventListener("click", event -> {
-                        if (event.getEventData().getNumber("event.detail") == 1) {
+                        if (event.getEventData()
+                                .getNumber("event.detail") == 1) {
                             toggleSelection();
                         }
                     });
@@ -460,7 +463,8 @@ public class BeanTable<T> extends HtmlComponent
             createCells();
         }
 
-        private void toggleSelection() {
+        // Package protected for enabling unit testing
+        void toggleSelection() {
             if (selectionEnabled) {
                 if (selected.contains(item)) {
                     selected.remove(item);
@@ -710,6 +714,8 @@ public class BeanTable<T> extends HtmlComponent
         return column;
     }
 
+    // Converts "propertyName" to "Property Name"
+    // used for automatic header generation
     private String formatName(String propertyName) {
         if (propertyName == null || propertyName.isEmpty())
             return "";
@@ -796,6 +802,7 @@ public class BeanTable<T> extends HtmlComponent
         return column;
     }
 
+    // Rebuild the header row to reflect the current state
     private void updateHeader() {
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
@@ -818,17 +825,8 @@ public class BeanTable<T> extends HtmlComponent
                 item.setCheckable(true);
                 item.setChecked(true);
                 item.addClickListener(e -> {
-                    if (!item.isChecked()) {
-                        cell.getStyle().set("display", "none");
-                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
-                                .getStyle().set("display", "none"));
-                        column.updateVisible(false);
-                    } else {
-                        cell.getStyle().set("display", "table-cell");
-                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
-                                .getStyle().set("display", "table-cell"));
-                        column.updateVisible(true);
-                    }
+                    boolean hide = !item.isChecked();
+                    updateColumnVisibility(column, hide);
                 });
                 item.getElement().getStyle().set("font-size",
                         "var(--lumo-font-size-m)");
@@ -844,11 +842,29 @@ public class BeanTable<T> extends HtmlComponent
             rowElement.appendChild(cell);
             index.incrementAndGet();
         });
-        rowElement.getChildren().reduce((first, second) -> second).orElse(null)
-                .appendChild(menuButton.getElement());
         headerElement.appendChild(rowElement);
+        headerElement.appendChild(menuButton.getElement());
     }
 
+    // Internally used by both user and programmatic visibility toggling
+    private void updateColumnVisibility(Column<?> column, boolean hide) {
+        int i = columns.indexOf(column);
+        Element c = headerElement.getChild(0).getChild(i + 1);
+        if (hide) {
+            c.getStyle().set("display", "none");
+            rows.forEach(row -> row.getRowElement().getChild(i + 1).getStyle()
+                    .set("display", "none"));
+            column.updateVisible(false);
+        } else {
+            c.getStyle().remove("display");
+            rows.forEach(row -> row.getRowElement().getChild(i + 1).getStyle()
+                    .remove("display"));
+            column.updateVisible(true);
+        }
+    }
+
+    // Rebuild the footer row to reflect the current state, e.g.
+    // the current page, paging buttons
     private void updateFooter() {
         footerElement.removeAllChildren();
         if (dataProviderSize > 0) {
@@ -919,6 +935,7 @@ public class BeanTable<T> extends HtmlComponent
         }
     }
 
+    // Set button tooltips according to current i18n objects
     private void updateTooltips(Button first, Button previous, Button next,
             Button last) {
         if (i18n != null) {
@@ -934,12 +951,14 @@ public class BeanTable<T> extends HtmlComponent
     public void setDataProvider(DataProvider<T, ?> dataProvider) {
         this.dataProvider.set(dataProvider);
         DataViewUtils.removeComponentFilterAndSortComparator(this);
-        int estimate = -1;
         if (getDataProvider() instanceof BackEndDataProvider) {
-            estimate = getLazyDataView().getItemCountEstimate();
-            if (estimate < 0) {
-                reset(false);
-            }
+            this.runBeforeClientResponse(ui -> {
+                int estimate = -1;
+                estimate = getLazyDataView().getItemCountEstimate();
+                if (estimate < 0) {
+                    reset(false);
+                }
+            });
         } else {
             reset(false);
         }
