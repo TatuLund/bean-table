@@ -3,11 +3,11 @@
 
 # Bean Table
 
-This is a simple html table based component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out.
+This is a simple html table based component backed by DataProvider. The data provider populates the Table with data from the beans. The component has minimal API and ultra simple design. The purpose of this component is to be a little sibling to Grid. Thus there are many features intentionally left out such as multiple header rows and header groupings.
 
 This component does support basic support lazy loading of the data in paged mode. Non paged mode is purposed for the small data sets only. In other words this is designed for use cases where Grid is too heavy, overkill, etc.
 
--  The latest version attempts to add top-notch accessibility support when focus behavior is enabled.
+- The latest version attempts to add top-notch accessibility support when focus behavior is enabled.
 
 - There is proper keyboard navigation when focus behavior is enabled.
 
@@ -19,11 +19,33 @@ This component does support basic support lazy loading of the data in paged mode
 
 - There is rudimentary paging support for larger sets of data. This seems to work well also with accessibility.
 
-- There is selection mode for multiple rows
+- There is selection mode for multiple rows.
+
+- There is opt in integrated menu for column hide/show and theme variant to show row indexes.
 
 The component seems to have better performance than Grid when using Firefox as a browser. When using Chrome, the case is the opposite by Grid rendering faster.
 
+This component is demonstration of how powerful Vaadin's Element API is. The implementation has been done almost fully with Java, except small pieces of JavaScript needed for keyboard navigation and focus handling. Thus some 90% of the functionality can be asserted by regular unit tests, that can be found inu
+
+`src/test/java/org/vaadin/tatu/BeanTableTest.java`
+
+## Demoo
+[Live demo](https://vaadin.com/directory/component/beantable)
+
 ## Release notes
+
+### 3.0.3
+
+- Fix column menu button disappearing when last column is hidden
+- Fix issue when using callback dataprovider without
+
+### 3.0.2
+
+- Fix column menu button styles
+
+### 3.0.1
+
+- Small performance improvement in programmatic column visibility toggling
 
 ### 3.0.0
 - First version to support Vaadin 24
