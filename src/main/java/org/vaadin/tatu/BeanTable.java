@@ -1358,7 +1358,9 @@ public class BeanTable<T> extends HtmlComponent
      * Note: If FocusBehavior.NONE used, then does nothing.
      * 
      * @param row
+     *            The row index
      * @param col
+     *            The column index
      */
     public void focus(int row, int col) {
         if (focusBehavior != FocusBehavior.NONE) {
