@@ -69,14 +69,14 @@ public class View extends VerticalLayout {
         // table.setColumns("year","month","expenses");
         data = getData(25);
         dataView = table.setItems(data);
-        MyButton plus = new MyButton("+");
-        MyButton minus = new MyButton("-");
+        Button plus = new Button("+");
+        Button minus = new Button("-");
         dataView.setFilter(expense -> expense.getYear() == year);
-        plus.addSingleClickListener(event -> {
+        plus.addClickListener(event -> {
             year++;
             dataView.setFilter(expense -> expense.getYear() == year);
         });
-        minus.addSingleClickListener(event -> {
+        minus.addClickListener(event -> {
             year--;
             dataView.setFilter(expense -> expense.getYear() == year);
         });
@@ -190,34 +190,5 @@ public class View extends VerticalLayout {
             this.year = year;
         }
 
-    }
-
-    class MyButton extends Button {
-
-        public MyButton(String caption) {
-            super(caption);
-            this.addClickListener(e -> {
-                if (e.getClickCount() == 1) {
-                    setEnabled(false);
-                    try {
-                        fireEvent(new SingleClickEvent(this, true));
-                    } finally {
-                        setEnabled(true);
-                    }
-                }
-            });
-        }
-
-        public Registration addSingleClickListener(
-                ComponentEventListener<SingleClickEvent> listener) {
-            return addListener(SingleClickEvent.class, listener);
-        }
-
-    }
-
-    public static class SingleClickEvent extends ComponentEvent<MyButton> {
-        public SingleClickEvent(MyButton source, boolean isFromClient) {
-            super(source, isFromClient);
-        }
     }
 }

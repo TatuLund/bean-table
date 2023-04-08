@@ -842,9 +842,8 @@ public class BeanTable<T> extends HtmlComponent
             rowElement.appendChild(cell);
             index.incrementAndGet();
         });
-        rowElement.getChildren().reduce((first, second) -> second).orElse(null)
-                .appendChild(menuButton.getElement());
         headerElement.appendChild(rowElement);
+        headerElement.appendChild(menuButton.getElement());
     }
 
     // Internally used by both user and programmatic visibility toggling
@@ -952,12 +951,14 @@ public class BeanTable<T> extends HtmlComponent
     public void setDataProvider(DataProvider<T, ?> dataProvider) {
         this.dataProvider.set(dataProvider);
         DataViewUtils.removeComponentFilterAndSortComparator(this);
-        int estimate = -1;
         if (getDataProvider() instanceof BackEndDataProvider) {
-            estimate = getLazyDataView().getItemCountEstimate();
-            if (estimate < 0) {
-                reset(false);
-            }
+            this.runBeforeClientResponse(ui -> {
+                int estimate = -1;
+                estimate = getLazyDataView().getItemCountEstimate();
+                if (estimate < 0) {
+                    reset(false);
+                }
+            });
         } else {
             reset(false);
         }

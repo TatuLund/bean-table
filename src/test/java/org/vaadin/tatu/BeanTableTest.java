@@ -19,7 +19,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
 import org.vaadin.tatu.BeanTable.Column;
+import org.vaadin.tatu.BeanTable.ColumnAlignment;
+import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
 
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -56,7 +59,8 @@ public class BeanTableTest {
         table.setItems(items);
         table.setCaption("Items");
         ui.add(table);
-        
+        fakeClientCommunication();
+
         assertBasicTable(table, col);
     }
 
@@ -72,7 +76,8 @@ public class BeanTableTest {
         table.setItems(items);
         table.setCaption("Items");
         ui.add(table);
-        
+        fakeClientCommunication();
+
         assertBasicTable(table, col);
     }
 
@@ -113,7 +118,7 @@ public class BeanTableTest {
         assertBodyStrucure(table, null);
 
         col.setVisible(false);
-        this.fakeClientCommunication();
+        fakeClientCommunication();
 
         Assert.assertEquals("none", table.headerElement.getChild(0).getChild(2)
                 .getStyle().get("display"));
@@ -122,7 +127,7 @@ public class BeanTableTest {
         Assert.assertFalse(col.isVisible());
 
         col.setVisible(true);
-        this.fakeClientCommunication();
+        fakeClientCommunication();
 
         Assert.assertEquals(null, table.headerElement.getChild(0).getChild(2)
                 .getStyle().get("display"));
@@ -139,6 +144,9 @@ public class BeanTableTest {
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
+            if (index % 2 == 0) {
+                Assert.assertTrue(row.getClassList().contains("even"));
+            }
             Assert.assertEquals("tr", row.getTag());
             Assert.assertEquals("" + (index + 1),
                     row.getAttribute("aria-rowindex"));
@@ -176,6 +184,9 @@ public class BeanTableTest {
         table.setItems(items);
         table.setCaption("Items");
 
+        ui.add(table);
+        fakeClientCommunication();
+
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
@@ -210,6 +221,9 @@ public class BeanTableTest {
         table.setItems(items);
         table.setCaption("Items");
 
+        ui.add(table);
+        fakeClientCommunication();
+
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
             int index = counter.getAndIncrement();
@@ -239,6 +253,82 @@ public class BeanTableTest {
     }
 
     @Test
+    public void lazyDataView() {
+        BeanTable<Person> table = new BeanTable<>(Person.class, true, 20);
+        PersonService personService = new PersonService();
+        table.setItems(query -> personService
+                .fetch(query.getOffset(), query.getLimit(), null).stream());
+        table.getLazyDataView().setItemCountEstimate(100);
+
+        Assert.assertEquals(100,
+                table.getLazyDataView().getItemCountEstimate());
+
+        Person item = table.getLazyDataView().getItem(40);
+        Assert.assertEquals("Layla", item.getFirstName());
+        item = table.getLazyDataView().getItem(2);
+        Assert.assertEquals("Brayden", item.getFirstName());
+
+        Assert.assertEquals(109, table.getLazyDataView().getItems().count());
+
+        Element div = table.footerElement.getChild(0).getChild(0).getChild(0);
+
+        Assert.assertEquals("1/5", div.getChild(2).getText());
+
+        Assert.assertEquals("#",
+                table.headerElement.getChild(0).getChild(0).getText());
+        Assert.assertEquals("Address",
+                table.headerElement.getChild(0).getChild(1).getText());
+        Assert.assertEquals("Age",
+                table.headerElement.getChild(0).getChild(2).getText());
+        Assert.assertEquals("Birth Date",
+                table.headerElement.getChild(0).getChild(3).getText());
+        Assert.assertEquals("Email",
+                table.headerElement.getChild(0).getChild(4).getText());
+        Assert.assertEquals("First Name",
+                table.headerElement.getChild(0).getChild(5).getText());
+        Assert.assertEquals("Id",
+                table.headerElement.getChild(0).getChild(6).getText());
+        Assert.assertEquals("Image",
+                table.headerElement.getChild(0).getChild(7).getText());
+        Assert.assertEquals("Last Name",
+                table.headerElement.getChild(0).getChild(8).getText());
+        Assert.assertEquals("Marital Status",
+                table.headerElement.getChild(0).getChild(9).getText());
+        Assert.assertEquals("Phone Number",
+                table.headerElement.getChild(0).getChild(10).getText());
+        Assert.assertEquals("Subscriber",
+                table.headerElement.getChild(0).getChild(11).getText());
+
+        Assert.assertEquals("100",
+                table.getElement().getAttribute("aria-rowcount"));
+        Assert.assertEquals(100, table.getRowCount());
+        Assert.assertEquals(20, table.bodyElement.getChildCount());
+
+        Assert.assertEquals("Brayden",
+                table.bodyElement.getChild(2).getChild(5).getText());
+        Assert.assertEquals("Wilder",
+                table.bodyElement.getChild(2).getChild(8).getText());
+        Assert.assertEquals("59",
+                table.bodyElement.getChild(2).getChild(2).getText());
+
+        table.setPage(2);
+
+        div = table.footerElement.getChild(0).getChild(0).getChild(0);
+        Assert.assertEquals("3/5", div.getChild(2).getText());
+
+        Assert.assertEquals("41",
+                table.bodyElement.getChild(0).getAttribute("aria-rowindex"));
+        Assert.assertEquals("41",
+                table.bodyElement.getChild(0).getChild(0).getText());
+        Assert.assertEquals("Layla",
+                table.bodyElement.getChild(0).getChild(5).getText());
+        Assert.assertEquals("Harmon",
+                table.bodyElement.getChild(0).getChild(8).getText());
+        Assert.assertEquals("30",
+                table.bodyElement.getChild(0).getChild(2).getText());
+    }
+
+    @Test
     public void lazyFilteringAndPaging() {
         BeanTable<Person> table = new BeanTable<>(Person.class, false, 20);
         PersonService personService = new PersonService();
@@ -259,15 +349,21 @@ public class BeanTableTest {
         ConfigurableFilterDataProvider<Person, Void, String> dp = dataProvider
                 .withConfigurableFilter();
 
-        table.setI18n(BeanTableI18n.getDefault());
+        Assert.assertEquals(null, table.getI18n());
+        BeanTableI18n i18n = BeanTableI18n.getDefault();
+        table.setI18n(i18n);
+        Assert.assertEquals(i18n, table.getI18n());
+
         BeanTableDataView<Person> dataView = table.setItems(dp);
 
         dataView.addItemCountChangeListener(event -> {
             count = event.getItemCount();
         });
-        Element div = table.footerElement.getChild(0).getChild(0).getChild(0);
 
         ui.add(table);
+        this.fakeClientCommunication();
+
+        Element div = table.footerElement.getChild(0).getChild(0).getChild(0);
 
         Assert.assertEquals("Page 1 of 6", div.getChild(2).getText());
 
@@ -304,6 +400,7 @@ public class BeanTableTest {
 
         Assert.assertEquals("109",
                 table.getElement().getAttribute("aria-rowcount"));
+        Assert.assertEquals(109, table.getRowCount());
         Assert.assertEquals(20, table.bodyElement.getChildCount());
 
         Assert.assertEquals("Brayden",
@@ -344,6 +441,7 @@ public class BeanTableTest {
         Assert.assertEquals(3, table.bodyElement.getChildCount());
         Assert.assertEquals(3, count);
         Assert.assertEquals(0, table.getPage());
+        Assert.assertEquals(3, dataView.getItems().count());
 
         Assert.assertEquals("Bentley",
                 table.bodyElement.getChild(2).getChild(1).getText());
@@ -353,6 +451,9 @@ public class BeanTableTest {
                 table.bodyElement.getChild(2).getChild(3).getText());
         Assert.assertEquals("643-754-1623",
                 table.bodyElement.getChild(2).getChild(4).getText());
+
+        Person item = dataView.getItem(2);
+        Assert.assertEquals("Bentley", item.getFirstName());
 
         Assert.assertEquals("8", table.footerElement.getChild(0).getChild(0)
                 .getAttribute("colspan"));
@@ -423,6 +524,7 @@ public class BeanTableTest {
         table.setItems(items);
         table.setSelectionEnabled(true);
         ui.add(table);
+        fakeClientCommunication();
 
         count = 0;
         table.addSelectionChangedListener(event -> {
@@ -459,6 +561,9 @@ public class BeanTableTest {
         table.setItems(items);
         table.getGenericDataView().setIdentifierProvider(TestItem::getId);
 
+        ui.add(table);
+        fakeClientCommunication();
+
         Element rows = table.bodyElement;
         Assert.assertEquals(3, rows.getChildCount());
         Assert.assertEquals("One", rows.getChild(0).getChild(1).getText());
@@ -469,6 +574,97 @@ public class BeanTableTest {
         item.setData("Zero");
         table.getGenericDataView().refreshItem(item);
         Assert.assertEquals("Zero", rows.getChild(0).getChild(1).getText());
+    }
+
+    @Test
+    public void menuButton() {
+        BeanTable<TestItem> table = new BeanTable<>();
+        Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
+                .map(data -> new TestItem(data));
+        BeanTable<TestItem>.Column<TestItem> col = table.addColumn("Number",
+                TestItem::getData);
+        table.setItems(items);
+
+        Assert.assertFalse(table.headerElement.getChild(1).isVisible());
+
+        table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
+
+        Assert.assertEquals(2, table.headerElement.getChildCount());
+        Assert.assertTrue(table.headerElement.getChild(1).isVisible());
+        Assert.assertEquals("vaadin-button",
+                table.headerElement.getChild(1).getTag());
+
+        col.setVisible(false);
+
+        Assert.assertEquals(2, table.headerElement.getChildCount());
+        Assert.assertTrue(table.headerElement.getChild(1).isVisible());
+        Assert.assertEquals("vaadin-button",
+                table.headerElement.getChild(1).getTag());
+
+        table.setColumnSelectionMenu(ColumnSelectMenu.CONTEXT);
+
+        Assert.assertFalse(table.headerElement.getChild(1).isVisible());
+    }
+
+    @Test
+    public void column() {
+        BeanTable<TestItem> table = new BeanTable<>();
+        Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
+                .map(data -> new TestItem(data));
+        BeanTable<TestItem>.Column<TestItem> col = table
+                .addColumn("Number", TestItem::getData)
+                .setClassNameProvider(item -> item.getData())
+                .setAlignment(ColumnAlignment.RIGHT).setHeader("Header");
+        table.setClassNameProvider(item -> "class");
+
+        table.setItems(items);
+
+        ui.add(table);
+
+        Text header = (Text) col.getHeader();
+        Assert.assertEquals("Header", header.getText());
+
+        Assert.assertEquals("Header",
+                table.headerElement.getChild(0).getChild(1).getText());
+
+        Element rows = table.bodyElement;
+        Assert.assertEquals(3, rows.getChildCount());
+        Assert.assertTrue(
+                rows.getChild(0).getChild(1).getClassList().contains("One"));
+        Assert.assertTrue(
+                rows.getChild(1).getChild(1).getClassList().contains("Two"));
+        Assert.assertTrue(
+                rows.getChild(2).getChild(1).getClassList().contains("Three"));
+
+        Assert.assertTrue(rows.getChild(0).getClassList().contains("class"));
+        Assert.assertTrue(rows.getChild(1).getClassList().contains("class"));
+        Assert.assertTrue(rows.getChild(2).getClassList().contains("class"));
+
+        Assert.assertEquals("right",
+                rows.getChild(0).getChild(1).getStyle().get("text-align"));
+        Assert.assertEquals("right",
+                rows.getChild(1).getChild(1).getStyle().get("text-align"));
+        Assert.assertEquals("right",
+                rows.getChild(2).getChild(1).getStyle().get("text-align"));
+
+        col.setClassNameProvider(item -> "class").setHeader(new Span("Header"));
+
+        Span newHeader = (Span) col.getHeader();
+        Assert.assertEquals("Header", newHeader.getText());
+
+        Assert.assertEquals("span", table.headerElement.getChild(0).getChild(1)
+                .getChild(0).getTag());
+        Assert.assertEquals("Header", table.headerElement.getChild(0)
+                .getChild(1).getChild(0).getText());
+
+        table.getDataProvider().refreshAll();
+
+        Assert.assertTrue(
+                rows.getChild(0).getChild(1).getClassList().contains("class"));
+        Assert.assertTrue(
+                rows.getChild(1).getChild(1).getClassList().contains("class"));
+        Assert.assertTrue(
+                rows.getChild(2).getChild(1).getClassList().contains("class"));
     }
 
     @Test
@@ -524,6 +720,10 @@ public class BeanTableTest {
             Assert.assertFalse(event.isFromClient());
             count++;
         });
+
+        ui.add(table);
+        fakeClientCommunication();
+
         assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
         // Select four items and assert that event was fired once, assert
@@ -533,6 +733,9 @@ public class BeanTableTest {
         Assert.assertEquals(
                 Set.of(items.get(3), items.get(5), items.get(7), items.get(9)),
                 selected);
+        Assert.assertEquals(
+                Set.of(items.get(3), items.get(5), items.get(7), items.get(9)),
+                table.getSelected());
         assertSelectedThemeSet(table, 3, 5, 7, 9);
         assertSelectedThemeNotSet(table, 0, 1, 2, 4, 6, 8);
 

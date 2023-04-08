@@ -6,3 +6,56 @@ vaadin-multi-select-combo-box[theme~="centered"]::part(label) {
 	align-self: center;
 }
 
+vaadin-radio-group.green > label {
+	color: green;
+}
+
+vaadin-radio-group.green {
+    box-shadow: 2px 2px 2px 2px green;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+vaadin-radio-group.green > vaadin-radio-button {
+	padding: 5px;
+	border-top: 1px solid green;
+	border-bottom: 1px solid green;
+}
+
+vaadin-radio-group.green > vaadin-radio-button:first-child {
+	border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    border-left: 1px solid green;
+}
+
+vaadin-radio-group.green > vaadin-radio-button:nth-child(4) {
+	border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-right: 1px solid green;
+}
+
+vaadin-radio-group.green > vaadin-radio-button > label {
+	color: green;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+vaadin-radio-group.green > vaadin-radio-button::part(radio) {
+	background: transparent;
+    border: 1px solid black;
+    border-radius: 2px;
+    box-shadow: 2px 2px 2px 2px green;
+}
+
+vaadin-radio-group.green > vaadin-radio-button::part(radio)::before {
+    display: none;
+}
+
+vaadin-radio-group.green > vaadin-radio-button::part(radio)::after {
+	content: '\2713';
+	color: green;
+	font-weight: 700;
+	top: 0px;
+	left: 2px;
+	border: unset;
+}
