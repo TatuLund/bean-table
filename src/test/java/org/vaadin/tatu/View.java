@@ -64,8 +64,9 @@ public class View extends VerticalLayout {
                 dialog.open();
             });
             return edit;
-        }).setHeader(new Html("<span style='color: blue'>Edit</span>"))
-                .setAlignment(ColumnAlignment.CENTER).setWidth("100px");
+        }).setHeader(new Html("""
+                <span style='color: blue'>Edit</span>
+                """)).setAlignment(ColumnAlignment.CENTER).setWidth("100px");
         // table.setColumns("year","month","expenses");
         data = getData(25);
         dataView = table.setItems(data);
@@ -81,7 +82,7 @@ public class View extends VerticalLayout {
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
-        
+
         Button newData = new Button("Add " + nextYear);
         newData.addClickListener(event -> {
             dataView.addItems(getNewData(nextYear++));
