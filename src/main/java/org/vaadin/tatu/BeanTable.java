@@ -52,7 +52,6 @@ import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.dom.DomListenerRegistration;
 import com.vaadin.flow.dom.Element;
-import com.vaadin.flow.dom.Style;
 import com.vaadin.flow.function.SerializableBiFunction;
 import com.vaadin.flow.function.SerializableComparator;
 import com.vaadin.flow.function.SerializableConsumer;
@@ -402,18 +401,6 @@ public class BeanTable<T> extends HtmlComponent
          */
         public boolean isVisible() {
             return visible;
-        }
-
-        public Style getCellStyle(T item) {
-            Optional<BeanTable<T>.RowItem<T>> result = rows.stream()
-                    .filter(rowItem -> rowItem.getItem().equals(item))
-                    .findFirst();
-            if (result.isPresent()) {
-                BeanTable<T>.RowItem<T> rowItem = result.get();
-                int index = getColumns().indexOf(this);
-                return rowItem.getRowElement().getChild(index).getStyle();
-            }
-            return null;
         }
     }
 
@@ -1184,22 +1171,6 @@ public class BeanTable<T> extends HtmlComponent
 
     public void setItems(Stream<T> streamOfItems) {
         setItems(DataProvider.fromStream(streamOfItems));
-    }
-
-    @SuppressWarnings("unchecked")
-    private IdentifierProvider<T> getIdentifierProvider() {
-        IdentifierProvider<T> identifierProviderObject = ComponentUtil
-                .getData(this, IdentifierProvider.class);
-        if (identifierProviderObject == null) {
-            DataProvider<T, ?> dataProvider = getDataProvider();
-            if (dataProvider != null) {
-                return dataProvider::getId;
-            } else {
-                return IdentifierProvider.identity();
-            }
-        } else {
-            return identifierProviderObject;
-        }
     }
 
     private void identifierProviderChanged(
