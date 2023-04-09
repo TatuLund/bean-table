@@ -52,7 +52,6 @@ import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.QuerySortOrder;
 import com.vaadin.flow.dom.DomListenerRegistration;
 import com.vaadin.flow.dom.Element;
-import com.vaadin.flow.dom.Style;
 import com.vaadin.flow.function.SerializableBiFunction;
 import com.vaadin.flow.function.SerializableComparator;
 import com.vaadin.flow.function.SerializableConsumer;
@@ -403,18 +402,6 @@ public class BeanTable<T> extends HtmlComponent
         public boolean isVisible() {
             return visible;
         }
-
-        public Style getCellStyle(T item) {
-            Optional<BeanTable<T>.RowItem<T>> result = rows.stream()
-                    .filter(rowItem -> rowItem.getItem().equals(item))
-                    .findFirst();
-            if (result.isPresent()) {
-                BeanTable<T>.RowItem<T> rowItem = result.get();
-                int index = getColumns().indexOf(this);
-                return rowItem.getRowElement().getChild(index).getStyle();
-            }
-            return null;
-        }
     }
 
     /**
@@ -596,16 +583,35 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
         // Add JavaScript handling of the keyboard navigation
-        bodyElement.executeJs("this.addEventListener('keyup', (e) => {"
-                + "if (e.keyCode == 39) {"
-                + "let cell = document.activeElement.nextSibling; if (cell) { cell.focus(); }"
-                + "} else if (e.keyCode == 37) {"
-                + "let cell = document.activeElement.previousSibling; if (cell) { cell.focus(); }"
-                + "} else if (e.keyCode == 40) {"
-                + "let col = document.activeElement.cellIndex; let rowIndex = document.activeElement.closest('tr').rowIndex; let row = this.rows[rowIndex]; if (row) { row.cells[col].focus(); }"
-                + "} else if (e.keyCode == 38) {"
-                + "let col = document.activeElement.cellIndex; let rowIndex = document.activeElement.closest('tr').rowIndex; let row = this.rows[rowIndex - 2]; if (row) { row.cells[col].focus(); }"
-                + "}" + "})");
+        bodyElement.executeJs(
+                """
+                        this.addEventListener('keyup', (e) => {
+                          if (e.keyCode == 39) {
+                            let cell = document.activeElement.nextSibling;
+                            if (cell) {
+                              cell.focus();
+                            }
+                          } else if (e.keyCode == 37) {
+                            let cell = document.activeElement.previousSibling;
+                            if (cell) {
+                              cell.focus();
+                            }
+                          } else if (e.keyCode == 40) {
+                            let col = document.activeElement.cellIndex;
+                            let rowIndex = document.activeElement.closest('tr').rowIndex;
+                            let row = this.rows[rowIndex];
+                            if (row) {
+                              row.cells[col].focus();
+                            }
+                          } else if (e.keyCode == 38) {
+                            let col = document.activeElement.cellIndex;
+                            let rowIndex = document.activeElement.closest('tr').rowIndex;
+                            let row = this.rows[rowIndex - 2];
+                            if (row) {
+                              row.cells[col].focus();
+                            }
+                          }
+                        })""");
     }
 
     /**
@@ -1186,22 +1192,6 @@ public class BeanTable<T> extends HtmlComponent
         setItems(DataProvider.fromStream(streamOfItems));
     }
 
-    @SuppressWarnings("unchecked")
-    private IdentifierProvider<T> getIdentifierProvider() {
-        IdentifierProvider<T> identifierProviderObject = ComponentUtil
-                .getData(this, IdentifierProvider.class);
-        if (identifierProviderObject == null) {
-            DataProvider<T, ?> dataProvider = getDataProvider();
-            if (dataProvider != null) {
-                return dataProvider::getId;
-            } else {
-                return IdentifierProvider.identity();
-            }
-        } else {
-            return identifierProviderObject;
-        }
-    }
-
     private void identifierProviderChanged(
             IdentifierProvider<T> identifierProvider) {
         keyMapper.setIdentifierGetter(identifierProvider);
@@ -1363,9 +1353,18 @@ public class BeanTable<T> extends HtmlComponent
     public void focus(int row, int col) {
         if (focusBehavior != FocusBehavior.NONE) {
             col++;
-            bodyElement.executeJs(
-                    "setTimeout(function(){let row = $0.rows[$1]; if (row) { let cell = row.cells[$2]; if (cell) { cell.click(); cell.focus()}}}, 0)",
-                    bodyElement, row, col);
+            bodyElement.executeJs("""
+                    setTimeout(function(){
+                      let row = $0.rows[$1];
+                      if (row) {
+                        let cell = row.cells[$2];
+                        if (cell) {
+                          cell.click();
+                          cell.focus()
+                        }
+                      }
+                    }, 0)
+                            """, bodyElement, row, col);
         }
     }
 

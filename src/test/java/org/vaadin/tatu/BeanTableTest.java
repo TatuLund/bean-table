@@ -626,6 +626,16 @@ public class BeanTableTest {
         item.setData("Zero");
         table.getGenericDataView().refreshItem(item);
         Assert.assertEquals("Zero", rows.getChild(0).getChild(1).getText());
+
+        ui.remove(table);
+        fakeClientCommunication();
+
+        // Data provider listener is un-registered on detach, this refresh item
+        // is not applied
+        item = table.getGenericDataView().getItem(0);
+        item.setData("NonZero");
+        table.getGenericDataView().refreshItem(item);
+        Assert.assertEquals("Zero", rows.getChild(0).getChild(1).getText());
     }
 
     @Test
@@ -633,8 +643,7 @@ public class BeanTableTest {
         BeanTable<TestItem> table = new BeanTable<>();
         Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
                 .map(data -> new TestItem(data));
-        BeanTable<TestItem>.Column<TestItem> col = table.addColumn("Number",
-                TestItem::getData);
+        table.addColumn("Number", TestItem::getData).setKey("number");
         table.setItems(items);
 
         Assert.assertFalse(table.headerElement.getChild(1).isVisible());
@@ -646,7 +655,7 @@ public class BeanTableTest {
         Assert.assertEquals("vaadin-button",
                 table.headerElement.getChild(1).getTag());
 
-        col.setVisible(false);
+        table.getColumn("number").get().setVisible(false);
 
         Assert.assertEquals(2, table.headerElement.getChildCount());
         Assert.assertTrue(table.headerElement.getChild(1).isVisible());
@@ -664,12 +673,13 @@ public class BeanTableTest {
         Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
                 .map(data -> new TestItem(data));
         // Configure column
-        BeanTable<TestItem>.Column<TestItem> col = table
-                .addColumn("Number", TestItem::getData)
+        table.addColumn("Number", TestItem::getData)
                 .setClassNameProvider(item -> item.getData())
-                .setAlignment(ColumnAlignment.RIGHT).setHeader("Header");
+                .setAlignment(ColumnAlignment.RIGHT).setHeader("Header")
+                .setWidth("100px");
         table.setClassNameProvider(item -> "class");
 
+        BeanTable<TestItem>.Column<TestItem> col = table.getColumns().get(0);
         table.setItems(items);
 
         ui.add(table);
@@ -679,6 +689,8 @@ public class BeanTableTest {
         Assert.assertEquals("Header", header.getText());
         Assert.assertEquals("Header",
                 table.headerElement.getChild(0).getChild(1).getText());
+        Assert.assertEquals("100px", table.headerElement.getChild(0).getChild(1)
+                .getStyle().get("width"));
 
         // Assert that classname generator has been applied on the column
         Element rows = table.bodyElement;
