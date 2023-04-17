@@ -108,8 +108,11 @@ public class LazyView extends VerticalLayout {
         RouterLink big = new RouterLink("Big table demo", BigTable.class);
 
         table.addSelectionChangedListener(event -> {
-            String names = event.getSelected().stream().map(item -> item.getFirstName()).collect(Collectors.joining(","));
-            Notification.show("Selection size: "+event.getSelected().size()+" Names: "+names);
+            String names = event.getSelected().stream()
+                    .map(item -> item.getFirstName())
+                    .collect(Collectors.joining(","));
+            Notification.show("Selection size: " + event.getSelected().size()
+                    + " Names: " + names);
         });
 
         add(tools, layout, big);
