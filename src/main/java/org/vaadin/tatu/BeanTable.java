@@ -431,14 +431,12 @@ public class BeanTable<T> extends HtmlComponent
             }
             DomListenerRegistration clickReg = rowElement
                     .addEventListener("click", event -> {
-                        if (event.getEventData()
-                                .getNumber("event.detail") == 1) {
-                            toggleSelection();
-                            fireEvent(new ItemClickedEvent<>(BeanTable.this,
-                                    item, true));
-                        }
+                        toggleSelection();
+                        fireEvent(new ItemClickedEvent<>(BeanTable.this, item,
+                                true));
                     });
             clickReg.addEventData("event.detail");
+            clickReg.setFilter("event.detail == 1");
             DomListenerRegistration keyReg = rowElement
                     .addEventListener("keydown", event -> {
                         if (event.getEventData()
@@ -448,13 +446,20 @@ public class BeanTable<T> extends HtmlComponent
                                     item, true));
                         } else if (event.getEventData()
                                 .getNumber("event.keyCode") == 33) {
-                            previous.click();
+                            if (previous != null) {
+                                previous.click();
+                            }
                         } else if (event.getEventData()
                                 .getNumber("event.keyCode") == 34) {
-                            next.click();
+                            if (next != null) {
+                                next.click();
+                            }
                         }
                     });
             keyReg.addEventData("event.keyCode");
+            keyReg.addEventData(
+                    "([32, 33, 34].includes(event.keyCode)) ? event.preventDefault() : undefined");
+            keyReg.setFilter("[32, 33, 34].includes(event.keyCode)");
             if (selected.contains(item)) {
                 rowElement.getThemeList().add("selected");
             }

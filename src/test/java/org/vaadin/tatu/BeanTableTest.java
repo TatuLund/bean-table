@@ -35,6 +35,12 @@ import com.vaadin.flow.server.VaadinRequest;
 import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.VaadinSession;
 
+/**
+ * As most of the functionality of the BeanTable is implemented by using Element
+ * API, it is possible to cover that functionality by unit tests. There is some
+ * things that can't be covered by unit tests, and those are verified by
+ * BeanTableIT.java
+ */
 public class BeanTableTest {
 
     private int count;
