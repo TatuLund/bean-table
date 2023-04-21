@@ -1,5 +1,11 @@
 package org.vaadin.tatu;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.openqa.selenium.Keys;
@@ -7,7 +13,9 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
 import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
+import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
+import com.vaadin.testbench.screenshot.ImageFileUtil;
 
 /**
  * These integration tests cover only a small subset of the BeanTable
@@ -245,7 +253,44 @@ public class BeanTableIT extends AbstractViewTest {
             actions.sendKeys(Keys.ARROW_LEFT).perform();
         }
         Assert.assertEquals("Bentley", focusedElement().getText());
+    }
 
+    @Test
+    public void themeVariants() throws IOException {
+        TableElement table = $(TableElement.class).first();
+
+        MultiSelectComboBoxElement variants = $(
+                MultiSelectComboBoxElement.class).first();
+
+        for (List<String> perm : getPermutations()) {
+            variants.deselectAll();
+            String fileName = "default.png";
+            if (perm.size() > 0) {
+                fileName = perm.stream().map(name -> name.toLowerCase())
+                        .collect(Collectors.joining("-")) + ".png";
+            }
+            for (String name : perm) {
+                variants.selectByText(name);
+            }
+            Assert.assertTrue(table.compareScreen(
+                    ImageFileUtil.getReferenceScreenshotFile(fileName)));
+        }
+    }
+
+    public List<List<String>> getPermutations() {
+        List<String> variantNames = Arrays.asList("NO_BORDER", "NO_ROW_BORDERS",
+                "COLUMN_BORDERS", "ROW_STRIPES", "PADDING");
+        List<List<String>> permutations = new ArrayList<>();
+        for (int i = 0; i < Math.pow(2, variantNames.size()); i++) {
+            List<String> permutation = new ArrayList<>();
+            for (int j = 0; j < variantNames.size(); j++) {
+                if ((i & (1 << j)) != 0) {
+                    permutation.add(variantNames.get(j));
+                }
+            }
+            permutations.add(permutation);
+        }
+        return permutations;
     }
 
     private WebElement focusedElement() {

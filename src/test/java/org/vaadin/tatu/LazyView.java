@@ -52,7 +52,7 @@ public class LazyView extends VerticalLayout {
 
         BeanTableDataView<Person> dataView = table.setItems(dp);
 
-        table.setWidth("80%");
+        table.setWidth("1000px");
         table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
         layout.add(table);
 

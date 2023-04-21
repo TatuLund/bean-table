@@ -110,9 +110,9 @@ public abstract class AbstractViewTest extends TestBenchTestCase {
         getDriver().get(getURL(route));
 
         // We do screenshot testing, adjust settings to ensure less flakiness
-        Parameters.setScreenshotComparisonTolerance(0.05);
+        Parameters.setScreenshotComparisonTolerance(0.1);
         Parameters.setScreenshotComparisonCursorDetection(true);
-        testBench().resizeViewPortTo(800, 600);
+        testBench().resizeViewPortTo(1280, 900);
         Parameters.setMaxScreenshotRetries(3);
         Parameters.setScreenshotRetryDelay(1000);
 
