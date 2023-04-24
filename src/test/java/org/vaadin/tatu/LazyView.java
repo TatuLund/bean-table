@@ -1,5 +1,7 @@
 package org.vaadin.tatu;
 
+import java.util.stream.Collectors;
+
 import org.vaadin.gatanaso.MultiselectComboBox;
 import org.vaadin.tatu.BeanTable.BeanTableI18n;
 import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
@@ -46,7 +48,7 @@ public class LazyView extends VerticalLayout {
 
         table.setDataProvider(dp);
 
-        table.setWidthFull();
+        table.setWidth("1000px");
         table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
 
         TextField filter = new TextField("Filter");
@@ -72,8 +74,14 @@ public class LazyView extends VerticalLayout {
                     .ifPresent(col -> col.setVisible(e.getValue()));
         });
 
+        Checkbox selection = new Checkbox("Selection");
+        selection.addValueChangeListener(e -> {
+            table.setSelectionEnabled(e.getValue());
+        });
+
         MultiselectComboBox<BeanTableVariant> variants = new MultiselectComboBox<>(
                 "Variants");
+        variants.setId("variants");
         variants.setItems(BeanTableVariant.values());
         variants.addValueChangeListener(e -> {
             table.removeThemeVariants(BeanTableVariant.values());
@@ -83,7 +91,15 @@ public class LazyView extends VerticalLayout {
 
         HorizontalLayout tools = new HorizontalLayout();
         tools.getElement().getStyle().set("align-items", "baseline");
-        tools.add(filter, variants, button, phoneNumber);
+        tools.add(filter, variants, button, phoneNumber, selection);
+
+        table.addSelectionChangedListener(event -> {
+            String names = event.getSelected().stream()
+                    .map(item -> item.getFirstName())
+                    .collect(Collectors.joining(","));
+            Notification.show("Selection size: " + event.getSelected().size()
+                    + " Names: " + names);
+        });
 
         RouterLink big = new RouterLink("Big table demo", BigTable.class);
 

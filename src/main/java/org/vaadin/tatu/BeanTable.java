@@ -2,16 +2,20 @@ package org.vaadin.tatu;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.HasTheme;
@@ -35,6 +39,7 @@ import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.provider.KeyMapper;
 import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.data.provider.QuerySortOrder;
+import com.vaadin.flow.dom.DomListenerRegistration;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.SerializableBiFunction;
 import com.vaadin.flow.function.SerializableComparator;
@@ -73,7 +78,6 @@ public class BeanTable<T> extends HtmlComponent
     private DataProvider<T, ?> dataProvider = DataProvider.ofItems();
     private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
-    private List<RowItem<T>> rows = new ArrayList<>();
     private boolean htmlAllowed;
     private Class<T> beanType;
     private PropertySet<T> propertySet;
@@ -89,12 +93,19 @@ public class BeanTable<T> extends HtmlComponent
     private BeanTableI18n i18n;
     private FocusBehavior focusBehavior = FocusBehavior.NONE;
 
+    private Set<T> selected = new HashSet<>();
+    private boolean selectionEnabled = false;
+
+    // Package protected to enable unit testing
     Element captionElement;
     Element headerElement;
     Element bodyElement;
     Element footerElement;
     ContextMenu menu;
     Button menuButton = new Button(VaadinIcon.MENU.create());
+    List<RowItem<T>> rows = new ArrayList<>();
+    private Button previous;
+    private Button next;
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -351,8 +362,7 @@ public class BeanTable<T> extends HtmlComponent
         public Column<R> setVisible(boolean visible) {
             this.visible = visible;
             if (BeanTable.this.isAttached()) {
-                updateHeader();
-                reset(false);
+                updateColumnVisibility(this, !visible);
             }
             menuItem.setChecked(visible);
             return this;
@@ -378,11 +388,13 @@ public class BeanTable<T> extends HtmlComponent
 
     /**
      * Internal wrapper class for the rows with item data.
+     * <p>
+     * Note: Package protected for enabling unit testing
      * 
      * @param <R>
      *            Bean type
      */
-    private class RowItem<R> {
+    class RowItem<R> {
 
         private R item;
         private Element rowElement;
@@ -397,7 +409,63 @@ public class BeanTable<T> extends HtmlComponent
                     rowElement.getClassList().add(className);
                 }
             }
+            DomListenerRegistration clickReg = rowElement
+                    .addEventListener("click", event -> {
+                        toggleSelection();
+                        fireEvent(new ItemClickedEvent<>(BeanTable.this, item,
+                                true));
+                    });
+            clickReg.addEventData("event.detail");
+            clickReg.setFilter("event.detail == 1");
+            DomListenerRegistration keyReg = rowElement
+                    .addEventListener("keydown", event -> {
+                        if (event.getEventData()
+                                .getNumber("event.keyCode") == 32) {
+                            toggleSelection();
+                            fireEvent(new ItemClickedEvent<>(BeanTable.this,
+                                    item, true));
+                        } else if (event.getEventData()
+                                .getNumber("event.keyCode") == 33) {
+                            if (previous != null) {
+                                previous.click();
+                            }
+                        } else if (event.getEventData()
+                                .getNumber("event.keyCode") == 34) {
+                            if (next != null) {
+                                next.click();
+                            }
+                        }
+                    });
+            keyReg.addEventData("event.keyCode");
+            keyReg.addEventData(
+                    "([32, 33, 34].includes(event.keyCode)) ? event.preventDefault() : undefined");
+            keyReg.setFilter("[32, 33, 34].includes(event.keyCode)");
+            if (selected.contains(item)) {
+                rowElement.getThemeList().add("selected");
+            }
+
             createCells();
+        }
+
+        // Package protected for enabling unit testing
+        void toggleSelection() {
+            if (selectionEnabled) {
+                if (selected.contains(item)) {
+                    selected.remove(item);
+                    rowElement.getThemeList().remove("selected");
+                    rowElement.setAttribute("aria-selected", "false");
+                    rowElement.getChildren().forEach(cell -> cell
+                            .setAttribute("aria-selected", "false"));
+                } else {
+                    selected.add((T) item);
+                    rowElement.getThemeList().add("selected");
+                    rowElement.setAttribute("aria-selected", "true");
+                    rowElement.getChildren().forEach(
+                            cell -> cell.setAttribute("aria-selected", "true"));
+                }
+                fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
+                        true));
+            }
         }
 
         private void createCells() {
@@ -425,6 +493,9 @@ public class BeanTable<T> extends HtmlComponent
                     if (focusBehavior != FocusBehavior.NONE) {
                         cell.setAttribute("tabindex", "0");
                     }
+                }
+                if (selectionEnabled) {
+                    cell.setAttribute("aria-selected", "false");
                 }
                 if (!column.isVisible()) {
                     cell.getStyle().set("display", "none");
@@ -513,6 +584,37 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
+        bodyElement.executeJs("this.addEventListener('keydown', (e) => {"
+                + "if (e.keyCode == 39) {" + "e.preventDefault();"
+                + "let cell = document.activeElement;" + "do {"
+                + "cell = cell.nextSibling;"
+                + "} while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));"
+                + "if (cell) {" + "cell.focus();" + "}"
+                + "} else if (e.keyCode == 37) {" + "e.preventDefault();"
+                + "let cell = document.activeElement;" + "do {"
+                + "  cell = cell.previousSibling;"
+                + "} while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));"
+                + "if (cell) {" + "cell.focus();" + "}"
+                + "} else if (e.keyCode == 36) {" + "e.preventDefault();"
+                + "let row = document.activeElement.closest('tr');"
+                + "let col=1;"
+                + "while (col < row.cells.length-1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {"
+                + "col++;" + "}" + "if (row) {" + "row.cells[col].focus();"
+                + "}" + "} else if (e.keyCode == 35) {" + "e.preventDefault();"
+                + "let row = document.activeElement.closest('tr');"
+                + "let col=row.cells.length-1;"
+                + "while (col > 1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {"
+                + "col--;" + "}" + "if (row) {" + "row.cells[col].focus();"
+                + "}" + "} else if (e.keyCode == 40) {" + "e.preventDefault();"
+                + "let col = document.activeElement.cellIndex;"
+                + "let rowIndex = document.activeElement.closest('tr').rowIndex;"
+                + "let row = this.rows[rowIndex];" + "if (row) {"
+                + "row.cells[col].focus();" + "}"
+                + "} else if (e.keyCode == 38) {" + "e.preventDefault();"
+                + "let col = document.activeElement.cellIndex;"
+                + "let rowIndex = document.activeElement.closest('tr').rowIndex;"
+                + "let row = this.rows[rowIndex - 2];" + "if (row) {"
+                + "row.cells[col].focus();" + "}" + "}" + "})");
     }
 
     /**
@@ -708,6 +810,7 @@ public class BeanTable<T> extends HtmlComponent
         return column;
     }
 
+    // Rebuild the header row to reflect the current state
     private void updateHeader() {
         headerElement.removeAllChildren();
         Element rowElement = new Element("tr");
@@ -730,17 +833,9 @@ public class BeanTable<T> extends HtmlComponent
                 item.setCheckable(true);
                 item.setChecked(true);
                 item.addClickListener(e -> {
-                    if (!item.isChecked()) {
-                        cell.getStyle().set("display", "none");
-                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
-                                .getStyle().set("display", "none"));
-                        column.updateVisible(false);
-                    } else {
-                        cell.getStyle().set("display", "table-cell");
-                        rows.forEach(row -> row.getRowElement().getChild(i + 1)
-                                .getStyle().set("display", "table-cell"));
-                        column.updateVisible(true);
-                    }
+                    boolean hide = !item.isChecked();
+                    updateColumnVisibility(column, hide);
+                    menuButton.focus();
                 });
                 item.getElement().getStyle().set("font-size",
                         "var(--lumo-font-size-m)");
@@ -756,11 +851,29 @@ public class BeanTable<T> extends HtmlComponent
             rowElement.appendChild(cell);
             index.incrementAndGet();
         });
-        rowElement.getChildren().reduce((first, second) -> second).orElse(null)
-                .appendChild(menuButton.getElement());
         headerElement.appendChild(rowElement);
+        headerElement.appendChild(menuButton.getElement());
     }
 
+    // Internally used by both user and programmatic visibility toggling
+    private void updateColumnVisibility(Column<?> column, boolean hide) {
+        int i = columns.indexOf(column);
+        Element c = headerElement.getChild(0).getChild(i + 1);
+        if (hide) {
+            c.getStyle().set("display", "none");
+            rows.forEach(row -> row.getRowElement().getChild(i + 1).getStyle()
+                    .set("display", "none"));
+            column.updateVisible(false);
+        } else {
+            c.getStyle().remove("display");
+            rows.forEach(row -> row.getRowElement().getChild(i + 1).getStyle()
+                    .remove("display"));
+            column.updateVisible(true);
+        }
+    }
+
+    // Rebuild the footer row to reflect the current state, e.g.
+    // the current page, paging buttons
     private void updateFooter() {
         footerElement.removeAllChildren();
         if (dataProviderSize > 0) {
@@ -771,10 +884,10 @@ public class BeanTable<T> extends HtmlComponent
             Button first = new Button();
             first.setIcon(VaadinIcon.ANGLE_DOUBLE_LEFT.create());
             first.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            Button previous = new Button();
+            previous = new Button();
             previous.setIcon(VaadinIcon.ANGLE_LEFT.create());
             previous.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            Button next = new Button();
+            next = new Button();
             next.setIcon(VaadinIcon.ANGLE_RIGHT.create());
             next.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
             Button last = new Button();
@@ -1074,6 +1187,11 @@ public class BeanTable<T> extends HtmlComponent
         return currentPage;
     }
 
+    /**
+     * Get the number of the rows in the table after filtering.
+     * 
+     * @return int value.
+     */
     public int getRowCount() {
         return Integer.valueOf(getElement().getAttribute("aria-rowcount"));
     }
@@ -1102,13 +1220,41 @@ public class BeanTable<T> extends HtmlComponent
 
     /**
      * Push focus to first body cell, not row header cell.
+     * <p>
+     * Note: If FocusBehavior.NONE used, then does nothing.
      */
     public void focus() {
-        if (focusBehavior != FocusBehavior.NONE) {
-            getElement().executeJs(
-                    "setTimeout(function(){let firstTd = $0.querySelector('tr:first-child > td:first-child'); firstTd.click(); firstTd.focus(); },0)",
-                    this);
-        }
+        focus(0, 0);
+    }
+
+    /**
+     * Push focus to the first column of the row where item is if item is on the
+     * current page.
+     * <p>
+     * Note: If FocusBehavior.NONE used, then does nothing.
+     * 
+     * @param item
+     *            The item to focus.
+     */
+    public void focus(T item) {
+        int rowIndex = rows.indexOf(item);
+        focus(rowIndex, 0);
+    }
+
+    /**
+     * Push focus to specific row and column by index if such cell exists in the
+     * table.
+     * <p>
+     * Note: If FocusBehavior.NONE used, then does nothing.
+     * 
+     * @param row
+     * @param col
+     */
+    public void focus(int row, int col) {
+        col++;
+        bodyElement.executeJs(
+                "setTimeout(function(){let row = $0.rows[$1]; if (row) { let cell = row.cells[$2]; if (cell) { cell.click(); cell.focus()}}}, 0)",
+                bodyElement, row, col);
     }
 
     /**
@@ -1179,6 +1325,132 @@ public class BeanTable<T> extends HtmlComponent
         }
     }
 
+    /**
+     * Get currently selected items.
+     * 
+     * @return Set of selected items.
+     */
+    public Set<T> getSelected() {
+        return selected;
+    }
+
+    /**
+     * Select items.
+     * 
+     * @param items
+     *            Items to be selected.
+     */
+    @SuppressWarnings("unchecked")
+    public void select(T... items) {
+        boolean added = false;
+        for (T item : items) {
+            if (!selected.contains(item)) {
+                selected.add(item);
+                added = true;
+            }
+        }
+        if (added) {
+            getDataProvider().refreshAll();
+            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
+                    false));
+        }
+    }
+
+    /**
+     * Deselect items.
+     * 
+     * @param items
+     *            Items to be deselected.
+     */
+    @SuppressWarnings("unchecked")
+    public void deselect(T... items) {
+        boolean removed = false;
+        for (T item : items) {
+            if (selected.contains(item)) {
+                selected.remove(item);
+                removed = true;
+            }
+        }
+        if (removed) {
+            getDataProvider().refreshAll();
+            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
+                    false));
+        }
+    }
+
+    /**
+     * Clear the selection.
+     */
+    public void deselectAll() {
+        if (!selected.isEmpty()) {
+            selected.clear();
+            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
+                    false));
+            getDataProvider().refreshAll();
+        }
+    }
+
+    /**
+     * Enable/disable selection for user.
+     * <p>
+     * Note: If turned on, FocusBehavior is set to FocusBehavior.BODY_AND_HEADER
+     * to allow keyboard controls.
+     * 
+     * @param selectionEnabled
+     *            Boolean value.
+     */
+    public void setSelectionEnabled(boolean selectionEnabled) {
+        this.selectionEnabled = selectionEnabled;
+        if (selectionEnabled) {
+            getElement().setAttribute("aria-multiselectable", "true");
+            rows.forEach(row -> {
+                boolean rowSelected = selected.contains(row.getItem());
+                row.getRowElement().getChildren()
+                        .forEach(cell -> cell.setAttribute("aria-selected",
+                                rowSelected ? "true" : "false"));
+            });
+            setFocusBehavior(FocusBehavior.BODY_AND_HEADER);
+        } else {
+            getElement().setAttribute("aria-multiselectable", "false");
+            rows.forEach(row -> {
+                boolean rowSelected = selected.contains(row.getItem());
+                if (!rowSelected) {
+                    row.getRowElement().getChildren().forEach(
+                            cell -> cell.removeAttribute("aria-selected"));
+                }
+            });
+        }
+    }
+
+    /**
+     * Add SelectionChangedEvent listener to the BeanTable
+     * 
+     * @param listener
+     *            the listener to add.
+     * @return a registration for the listener
+     */
+    @SuppressWarnings("unchecked")
+    public Registration addSelectionChangedListener(
+            ComponentEventListener<SelectionChangedEvent<T, BeanTable<T>>> listener) {
+        return ComponentUtil.addListener(this, SelectionChangedEvent.class,
+                (ComponentEventListener) listener);
+    }
+
+    /**
+     * Add ItemClickedEvent listener to the BeanTable
+     * 
+     * @param listener
+     *            the listener to add.
+     * @return a registration for the listener
+     */
+    @SuppressWarnings("unchecked")
+    public Registration addItemClickedListener(
+            ComponentEventListener<ItemClickedEvent<T, BeanTable<T>>> listener) {
+        return ComponentUtil.addListener(this, ItemClickedEvent.class,
+                (ComponentEventListener) listener);
+    }
+
+    @SuppressWarnings("serial")
     public static class BeanTableI18n implements Serializable {
         private String lastPage;
         private String previousPage;
