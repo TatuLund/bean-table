@@ -6,8 +6,6 @@ import java.util.List;
 import org.vaadin.tatu.BeanTable.ColumnAlignment;
 import org.vaadin.tatu.BeanTable.FocusBehavior;
 
-import com.vaadin.flow.component.ComponentEvent;
-import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -18,7 +16,6 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.shared.Registration;
 
 @Route("")
 public class View extends VerticalLayout {
@@ -89,7 +86,7 @@ public class View extends VerticalLayout {
             newData.setText("Add " + nextYear);
         });
         RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
-
+        
         table.focus();
         add(plus, minus, table, newData, lazy);
     }

@@ -12,6 +12,7 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
+import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
@@ -256,6 +257,23 @@ public class BeanTableIT extends AbstractViewTest {
     }
 
     @Test
+    public void preserveOnRefresh() {
+        Actions actions = new Actions(getDriver());
+        $(ButtonElement.class).first().click();
+        
+        getDriver().navigate().refresh();
+        
+        TableElement table = $(TableElement.class).first();
+
+        actions.click(table.getCell(1, 1)).perform();
+        Assert.assertEquals("Layla", focusedElement().getText());
+        actions.sendKeys(Keys.END).perform();
+        Assert.assertEquals("Washington", focusedElement().getText());
+        actions.sendKeys(Keys.HOME).perform();
+        Assert.assertEquals("Layla", focusedElement().getText());
+    }
+    
+//    @Test
     public void themeVariants() throws IOException {
         TableElement table = $(TableElement.class).first();
 

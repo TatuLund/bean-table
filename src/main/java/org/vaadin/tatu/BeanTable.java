@@ -464,6 +464,10 @@ public class BeanTable<T> extends HtmlComponent
                 rowElement.getThemeList().add("selected");
             }
             createCells();
+            rowElement.addDetachListener(e -> {
+                keyReg.remove();
+                clickReg.remove();
+            });
         }
 
         // Package protected for enabling unit testing
@@ -606,6 +610,9 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
+    }
+
+    private void enableKeyboardNavigation() {
         // Add JavaScript handling of the keyboard navigation
         bodyElement.executeJs(
                 """
@@ -1164,6 +1171,7 @@ public class BeanTable<T> extends HtmlComponent
                 && dataProviderListenerRegistration == null) {
             setupDataProviderListener(getDataProvider());
         }
+        enableKeyboardNavigation();
     }
 
     @Override
