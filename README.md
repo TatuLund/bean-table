@@ -25,14 +25,32 @@ This component does support basic support lazy loading of the data in paged mode
 
 The component seems to have better performance than Grid when using Firefox as a browser. When using Chrome, the case is the opposite by Grid rendering faster.
 
-This component is demonstration of how powerful Vaadin's Element API is. The implementation has been done almost fully with Java, except small pieces of JavaScript needed for keyboard navigation and focus handling. Thus some 90% of the functionality can be asserted by regular unit tests, that can be found inu
+This component is demonstration of how powerful Vaadin's Element API is. The implementation has been done almost fully with Java, except small pieces of JavaScript needed for keyboard navigation and focus handling. Thus some 90% of the functionality can be asserted by regular unit tests, that can be found in.
 
 `src/test/java/org/vaadin/tatu/BeanTableTest.java`
 
-## Demoo
+The integration tests are in. These mainly cover some user interaction that cannot be asserted in unit tests such as keyboard navigation and mouse actions.
+
+`src/test/java/org/vaadin/tatu/BeanTableIT.java`
+
+## Demo
 [Live demo](https://vaadin.com/directory/component/beantable)
 
 ## Release notes
+
+### 3.1.2
+
+- Fix keyboard navigation getting lost with PreserveOnRefresh
+
+### 3.1.1
+
+- Small performance improvement in keyboard events
+
+### 3.1.0
+
+- Improve keyboard navigation
+- Improve A11y of the row selection
+- Added item click event
 
 ### 3.0.3
 
