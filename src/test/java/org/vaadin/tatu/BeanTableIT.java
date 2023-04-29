@@ -257,14 +257,39 @@ public class BeanTableIT extends AbstractViewTest {
     }
 
     @Test
+    public void itemClick() {
+        TableElement table = $(TableElement.class).first();
+        CheckboxElement checkbox = $(CheckboxElement.class).get(2);
+
+        checkbox.setChecked(true);
+
+        Actions actions = new Actions(getDriver());
+
+        actions.click(table.getCell(1, 1)).perform();
+        Assert.assertEquals("Clicked Bentley", getLastNotificationText());
+
+        actions.click(table.getCell(2, 1)).perform();
+        Assert.assertEquals("Clicked Brandon", getLastNotificationText());
+
+        actions.sendKeys(Keys.ARROW_UP, Keys.SPACE).perform();
+        Assert.assertEquals("Clicked Bentley", getLastNotificationText());
+    }
+
+    @Test
     public void preserveOnRefresh() {
         Actions actions = new Actions(getDriver());
+
+        // Go to page 3
         $(ButtonElement.class).first().click();
-        
+
+        // Reload the page
         getDriver().navigate().refresh();
-        
+
+        // Table is still found
         TableElement table = $(TableElement.class).first();
 
+        // Assert that keyboard navigation works and we are still
+        // on page 3
         actions.click(table.getCell(1, 1)).perform();
         Assert.assertEquals("Layla", focusedElement().getText());
         actions.sendKeys(Keys.END).perform();
@@ -272,8 +297,8 @@ public class BeanTableIT extends AbstractViewTest {
         actions.sendKeys(Keys.HOME).perform();
         Assert.assertEquals("Layla", focusedElement().getText());
     }
-    
-//    @Test
+
+    // @Test
     public void themeVariants() throws IOException {
         TableElement table = $(TableElement.class).first();
 

@@ -89,6 +89,8 @@ public class LazyView extends VerticalLayout {
             table.setSelectionEnabled(e.getValue());
         });
 
+        Checkbox click = new Checkbox("Click");
+
         MultiSelectComboBox<BeanTableVariant> variants = new MultiSelectComboBox<>(
                 "Variants");
         variants.setItems(BeanTableVariant.values());
@@ -105,7 +107,7 @@ public class LazyView extends VerticalLayout {
 
         HorizontalLayout tools = new HorizontalLayout();
         tools.addClassName(LumoUtility.AlignItems.BASELINE);
-        tools.add(filter, variants, button, select, phoneNumber, selection);
+        tools.add(filter, variants, button, select, phoneNumber, selection, click);
 
         RouterLink big = new RouterLink("Big table demo", BigTable.class);
 
@@ -115,6 +117,12 @@ public class LazyView extends VerticalLayout {
                     .collect(Collectors.joining(","));
             Notification.show("Selection size: " + event.getSelected().size()
                     + " Names: " + names);
+        });
+
+        table.addItemClickedListener(event -> {
+            if (click.getValue()) {
+                Notification.show("Clicked " + event.getItem().getFirstName());
+            }
         });
 
         add(tools, layout, big);
