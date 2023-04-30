@@ -124,6 +124,8 @@ public class BeanTable<T> extends HtmlComponent
     ContextMenu menu;
     Button menuButton = new Button(VaadinIcon.MENU.create());
     List<RowItem<T>> rows = new ArrayList<>();
+    private Button previous;
+    private Button next;
 
     public enum ColumnAlignment {
         CENTER, LEFT, RIGHT;
@@ -430,24 +432,39 @@ public class BeanTable<T> extends HtmlComponent
             }
             DomListenerRegistration clickReg = rowElement
                     .addEventListener("click", event -> {
-                        if (event.getEventData()
-                                .getNumber("event.detail") == 1) {
-                            toggleSelection();
-                        }
+                        toggleSelection();
+                        fireEvent(new ItemClickedEvent<>(BeanTable.this, item,
+                                true));
                     });
             clickReg.addEventData("event.detail");
+            clickReg.setFilter("event.detail == 1");
             DomListenerRegistration keyReg = rowElement
-                    .addEventListener("keyup", event -> {
+                    .addEventListener("keydown", event -> {
                         if (event.getEventData()
                                 .getNumber("event.keyCode") == 32) {
                             toggleSelection();
+                            fireEvent(new ItemClickedEvent<>(BeanTable.this,
+                                    item, true));
+                        } else if (event.getEventData()
+                                .getNumber("event.keyCode") == 33) {
+                            previous.click();
+                        } else if (event.getEventData()
+                                .getNumber("event.keyCode") == 34) {
+                            next.click();
                         }
                     });
             keyReg.addEventData("event.keyCode");
+            keyReg.addEventData(
+                    "([32, 33, 34].includes(event.keyCode)) ? event.preventDefault() : undefined");
+            keyReg.setFilter("[32, 33, 34].includes(event.keyCode)");
             if (selected.contains(item)) {
                 rowElement.getThemeList().add("selected");
             }
             createCells();
+            rowElement.addDetachListener(e -> {
+                keyReg.remove();
+                clickReg.remove();
+            });
         }
 
         // Package protected for enabling unit testing
@@ -457,10 +474,14 @@ public class BeanTable<T> extends HtmlComponent
                     selected.remove(item);
                     rowElement.getThemeList().remove("selected");
                     rowElement.setAttribute("aria-selected", "false");
+                    rowElement.getChildren().forEach(cell -> cell
+                            .setAttribute("aria-selected", "false"));
                 } else {
                     selected.add((T) item);
                     rowElement.getThemeList().add("selected");
                     rowElement.setAttribute("aria-selected", "true");
+                    rowElement.getChildren().forEach(
+                            cell -> cell.setAttribute("aria-selected", "true"));
                 }
                 fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
                         true));
@@ -565,6 +586,7 @@ public class BeanTable<T> extends HtmlComponent
     public BeanTable() {
         setClassName("bean-table");
         getElement().setAttribute("role", "grid");
+        getElement().setAttribute("aria-multiselectable", "false");
         headerElement = new Element("thead");
         headerElement.setAttribute("role", "rowgroup");
         footerElement = new Element("tfoot");
@@ -582,17 +604,41 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
+    }
+
+    private void enableKeyboardNavigation() {
         // Add JavaScript handling of the keyboard navigation
-        bodyElement.executeJs("this.addEventListener('keyup', (e) => {"
-                + "if (e.keyCode == 39) {"
-                + "let cell = document.activeElement.nextSibling; if (cell) { cell.focus(); }"
-                + "} else if (e.keyCode == 37) {"
-                + "let cell = document.activeElement.previousSibling; if (cell) { cell.focus(); }"
-                + "} else if (e.keyCode == 40) {"
-                + "let col = document.activeElement.cellIndex; let rowIndex = document.activeElement.closest('tr').rowIndex; let row = this.rows[rowIndex]; if (row) { row.cells[col].focus(); }"
-                + "} else if (e.keyCode == 38) {"
-                + "let col = document.activeElement.cellIndex; let rowIndex = document.activeElement.closest('tr').rowIndex; let row = this.rows[rowIndex - 2]; if (row) { row.cells[col].focus(); }"
-                + "}" + "})");
+        bodyElement.executeJs("this.addEventListener('keydown', (e) => {"
+                + "if (e.keyCode == 39) {" + "e.preventDefault();"
+                + "let cell = document.activeElement;" + "do {"
+                + "cell = cell.nextSibling;"
+                + "} while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));"
+                + "if (cell) {" + "cell.focus();" + "}"
+                + "} else if (e.keyCode == 37) {" + "e.preventDefault();"
+                + "let cell = document.activeElement;" + "do {"
+                + "  cell = cell.previousSibling;"
+                + "} while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));"
+                + "if (cell) {" + "cell.focus();" + "}"
+                + "} else if (e.keyCode == 36) {" + "e.preventDefault();"
+                + "let row = document.activeElement.closest('tr');"
+                + "let col=1;"
+                + "while (col < row.cells.length-1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {"
+                + "col++;" + "}" + "if (row) {" + "row.cells[col].focus();"
+                + "}" + "} else if (e.keyCode == 35) {" + "e.preventDefault();"
+                + "let row = document.activeElement.closest('tr');"
+                + "let col=row.cells.length-1;"
+                + "while (col > 1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {"
+                + "col--;" + "}" + "if (row) {" + "row.cells[col].focus();"
+                + "}" + "} else if (e.keyCode == 40) {" + "e.preventDefault();"
+                + "let col = document.activeElement.cellIndex;"
+                + "let rowIndex = document.activeElement.closest('tr').rowIndex;"
+                + "let row = this.rows[rowIndex];" + "if (row) {"
+                + "row.cells[col].focus();" + "}"
+                + "} else if (e.keyCode == 38) {" + "e.preventDefault();"
+                + "let col = document.activeElement.cellIndex;"
+                + "let rowIndex = document.activeElement.closest('tr').rowIndex;"
+                + "let row = this.rows[rowIndex - 2];" + "if (row) {"
+                + "row.cells[col].focus();" + "}" + "}" + "})");
     }
 
     /**
@@ -862,10 +908,10 @@ public class BeanTable<T> extends HtmlComponent
             Button first = new Button();
             first.setIcon(VaadinIcon.ANGLE_DOUBLE_LEFT.create());
             first.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            Button previous = new Button();
+            previous = new Button();
             previous.setIcon(VaadinIcon.ANGLE_LEFT.create());
             previous.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            Button next = new Button();
+            next = new Button();
             next.setIcon(VaadinIcon.ANGLE_RIGHT.create());
             next.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
             Button last = new Button();
@@ -1090,6 +1136,7 @@ public class BeanTable<T> extends HtmlComponent
                 && dataProviderListenerRegistration == null) {
             setupDataProviderListener(getDataProvider());
         }
+        enableKeyboardNavigation();
     }
 
     @Override
@@ -1273,6 +1320,11 @@ public class BeanTable<T> extends HtmlComponent
         return currentPage;
     }
 
+    /**
+     * Get the number of the rows in the table after filtering.
+     * 
+     * @return int value.
+     */
     public int getRowCount() {
         return Integer.valueOf(getElement().getAttribute("aria-rowcount"));
     }
@@ -1487,7 +1539,23 @@ public class BeanTable<T> extends HtmlComponent
     public void setSelectionEnabled(boolean selectionEnabled) {
         this.selectionEnabled = selectionEnabled;
         if (selectionEnabled) {
+            getElement().setAttribute("aria-multiselectable", "true");
+            rows.forEach(row -> {
+                boolean rowSelected = selected.contains(row.getItem());
+                row.getRowElement().getChildren()
+                        .forEach(cell -> cell.setAttribute("aria-selected",
+                                rowSelected ? "true" : "false"));
+            });
             setFocusBehavior(FocusBehavior.BODY_AND_HEADER);
+        } else {
+            getElement().setAttribute("aria-multiselectable", "false");
+            rows.forEach(row -> {
+                boolean rowSelected = selected.contains(row.getItem());
+                if (!rowSelected) {
+                    row.getRowElement().getChildren().forEach(
+                            cell -> cell.removeAttribute("aria-selected"));
+                }
+            });
         }
     }
 
@@ -1502,6 +1570,20 @@ public class BeanTable<T> extends HtmlComponent
     public Registration addSelectionChangedListener(
             ComponentEventListener<SelectionChangedEvent<T, BeanTable<T>>> listener) {
         return ComponentUtil.addListener(this, SelectionChangedEvent.class,
+                (ComponentEventListener) listener);
+    }
+
+    /**
+     * Add ItemClickedEvent listener to the BeanTable
+     * 
+     * @param listener
+     *            the listener to add.
+     * @return a registration for the listener
+     */
+    @SuppressWarnings("unchecked")
+    public Registration addItemClickedListener(
+            ComponentEventListener<ItemClickedEvent<T, BeanTable<T>>> listener) {
+        return ComponentUtil.addListener(this, ItemClickedEvent.class,
                 (ComponentEventListener) listener);
     }
 

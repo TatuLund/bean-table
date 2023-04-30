@@ -17,10 +17,12 @@ import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 
+@PreserveOnRefresh
 @Route("lazy")
 public class LazyView extends VerticalLayout {
 
@@ -49,7 +51,7 @@ public class LazyView extends VerticalLayout {
 
         BeanTableDataView<Person> dataView = table.setItems(dp);
 
-        table.setWidthFull();
+        table.setWidth("1000px");
         table.setColumnSelectionMenu(ColumnSelectMenu.BUTTON);
 
         TextField filter = new TextField("Filter");
@@ -83,6 +85,8 @@ public class LazyView extends VerticalLayout {
             table.setSelectionEnabled(e.getValue());
         });
 
+        Checkbox click = new Checkbox("Click");
+
         MultiSelectComboBox<BeanTableVariant> variants = new MultiSelectComboBox<>(
                 "Variants");
         variants.setItems(BeanTableVariant.values());
@@ -99,13 +103,23 @@ public class LazyView extends VerticalLayout {
 
         HorizontalLayout tools = new HorizontalLayout();
         tools.addClassName(LumoUtility.AlignItems.BASELINE);
-        tools.add(filter, variants, button, select, phoneNumber, selection);
+        tools.add(filter, variants, button, select, phoneNumber, selection,
+                click);
 
         RouterLink big = new RouterLink("Big table demo", BigTable.class);
 
         table.addSelectionChangedListener(event -> {
-            String names = event.getSelected().stream().map(item -> item.getFirstName()).collect(Collectors.joining(","));
-            Notification.show("Selection size: "+event.getSelected().size()+" Names: "+names);
+            String names = event.getSelected().stream()
+                    .map(item -> item.getFirstName())
+                    .collect(Collectors.joining(","));
+            Notification.show("Selection size: " + event.getSelected().size()
+                    + " Names: " + names);
+        });
+
+        table.addItemClickedListener(event -> {
+            if (click.getValue()) {
+                Notification.show("Clicked " + event.getItem().getFirstName());
+            }
         });
 
         add(tools, table, big);

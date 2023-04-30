@@ -3,7 +3,7 @@
 
     <groupId>org.vaadin.tatu</groupId>
     <artifactId>beantable</artifactId>
-    <version>2.9.1</version>
+    <version>2.10.0</version>
     <name>BeanTable</name>
     <description>Table component for Vaadin platform</description>
 
