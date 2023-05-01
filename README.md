@@ -41,6 +41,10 @@ These mainly cover some user interaction that cannot be asserted in unit tests s
 
 ## Release notes
 
+### 2.10.1
+- Added an alert text for "No data" when the table is empty
+- Added an error alert text "Fetching data failed" when data provider fetch fails
+
 ### 2.10.0
 - Fix keyboard navigation getting lost with PreserveOnRefresh and improve keyboard navigation
 - Small performance improvement in keyboard events

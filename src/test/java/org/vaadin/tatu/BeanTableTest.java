@@ -21,6 +21,8 @@ import org.vaadin.tatu.BeanTable.BeanTableI18n;
 import org.vaadin.tatu.BeanTable.ColumnAlignment;
 import org.vaadin.tatu.BeanTable.ColumnSelectMenu;
 import org.vaadin.tatu.BeanTable.FocusBehavior;
+import org.vaadin.tatu.EmptyTable.DataItem;
+import org.vaadin.tatu.EmptyTable.DataRepository;
 
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
@@ -495,6 +497,13 @@ public class BeanTableTest {
         Assert.assertTrue(div.getChild(4).getChildren()
                 .anyMatch(child -> child.getTag().equals("vaadin-tooltip")
                         && child.getProperty("text").equals("Last page")));
+
+        // Assert that "No data" is shown when no match
+        dp.setFilter("bentz");
+        fakeClientCommunication();
+        Assert.assertEquals("No data",
+                table.bodyElement.getChild(0).getChild(0).getText());
+        Assert.assertEquals(0, table.footerElement.getChildCount());
     }
 
     @Test
@@ -815,6 +824,39 @@ public class BeanTableTest {
         assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
+    @Test
+    public void emptyTable() {
+        BeanTable<DataItem> table = new BeanTable<>();
+        table.addColumn("Name", item -> item.getName());
+        table.addColumn("Data", item -> item.getData());
+
+        ui.add(table);
+        fakeClientCommunication();
+
+        Element alertCell = table.bodyElement.getChild(0).getChild(0);
+        Assert.assertEquals("No data", alertCell.getText());
+        Assert.assertEquals("alert", alertCell.getAttribute("role"));
+        Assert.assertEquals("assertive", alertCell.getAttribute("aria-live"));
+        Assert.assertEquals("3", alertCell.getAttribute("colspan"));
+    }
+
+    @Test
+    public void errorTable() {
+        // Note, an error and stacktrace will be logged when the test is run,
+        // that is intentional
+        FaultyDataService service = new FaultyDataService();
+        BeanTable<DataItem> table = new BeanTable<>(20);
+        table.addColumn("Name", item -> item.getName());
+        table.addColumn("Data", item -> item.getData());
+        table.setItems(query -> service.fetchPersons());
+        table.getLazyDataView().setItemCountEstimate(100);
+
+        ui.add(table);
+
+        Assert.assertEquals("Failed fetching data",
+                table.bodyElement.getChild(0).getChild(0).getText());
+    }
+
     private void assertSelectedThemeSet(BeanTable<DataItem> table,
             int... items) {
         for (int item : items) {
@@ -881,6 +923,20 @@ public class BeanTableTest {
 
         public void setData(String data) {
             this.data = data;
+        }
+    }
+
+    public class FaultyDataService {
+        FaultyDataRepository repository = new FaultyDataRepository();
+
+        public Stream<DataItem> fetchPersons() {
+            return repository.fetch().stream();
+        }
+    }
+
+    public class FaultyDataRepository {
+        public List<DataItem> fetch() {
+            return null;
         }
     }
 
