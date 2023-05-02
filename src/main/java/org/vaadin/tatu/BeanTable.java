@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.slf4j.LoggerFactory;
+
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEventListener;
@@ -610,6 +612,9 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
+        runBeforeClientResponse(ui -> {
+            setNoData();
+        });        
     }
 
     private void enableKeyboardNavigation() {
@@ -1072,6 +1077,44 @@ public class BeanTable<T> extends HtmlComponent
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
+    // Conditionally sets an informative message for the user if there has been
+    // no data fetched.
+    private void setNoData() {
+        if (rows.isEmpty()) {
+            bodyElement.setText("");
+            Element row = new Element("tr");
+            Element cell = createAlertCell();
+            cell.getClassList().add("no-data");
+            cell.setText(i18n != null && i18n.getNoDataText() != null
+                    ? i18n.getNoDataText()
+                    : "No data");
+            row.appendChild(cell);
+            bodyElement.appendChild(row);
+        }
+    }
+
+    // Called when data fetch failed, add an informative error for the user
+    private void setError() {
+        bodyElement.setText("");
+        Element row = new Element("tr");
+        Element cell = createAlertCell();
+        cell.getClassList().add("error-occurred");
+        cell.setText(i18n != null && i18n.getErrorText() != null
+                ? i18n.getErrorText()
+                : "Failed fetching data");
+        row.appendChild(cell);
+        bodyElement.appendChild(row);
+    }
+
+    private Element createAlertCell() {
+        Element cell = new Element("td");
+
+        cell.setAttribute("colspan", "" + (columns.size() + 1));
+        cell.setAttribute("aria-live", "assertive");
+        cell.setAttribute("role", "alert");
+        return cell;
+    }
+
     void reset(boolean refresh) {
         if (!refresh) {
             bodyElement.setText("");
@@ -1102,12 +1145,25 @@ public class BeanTable<T> extends HtmlComponent
         }
         synchronized (dataProvider) {
             final AtomicInteger itemCounter = new AtomicInteger(0);
-            getDataProvider().fetch(query).map(row -> createRow((T) row))
-                    .forEach(rowItem -> {
-                        addRow((BeanTable<T>.RowItem<T>) rowItem,
-                                (currentPage * pageLength) + itemCounter.get());
-                        itemCounter.incrementAndGet();
-                    });
+            boolean error = false;
+            try {
+                getDataProvider().fetch(query).map(row -> createRow((T) row))
+                        .forEach(rowItem -> {
+                            addRow((BeanTable<T>.RowItem<T>) rowItem,
+                                    (currentPage * pageLength)
+                                            + itemCounter.get());
+                            itemCounter.incrementAndGet();
+                        });
+            } catch (Exception e) {
+                setError();
+                error = true;
+                LoggerFactory.getLogger(BeanTable.class)
+                        .error("Could not fetch data");
+                e.printStackTrace();
+            }
+            if (!error) {
+                setNoData();
+            }
             lastFetchedDataSize = itemCounter.get();
             if (pageLength < 0) {
                 getElement().setAttribute("aria-rowcount",
@@ -1636,6 +1692,8 @@ public class BeanTable<T> extends HtmlComponent
         private String nextPage;
         private String firstPage;
         private String menuButton;
+        private String errorText;
+        private String noDataText;
         private SerializableBiFunction<Integer, Integer, String> pageProvider;
 
         public String getLastPage() {
@@ -1682,6 +1740,22 @@ public class BeanTable<T> extends HtmlComponent
             this.menuButton = menuButton;
         }
 
+        public String getErrorText() {
+            return errorText;
+        }
+
+        public void setErrorText(String errorText) {
+            this.errorText = errorText;
+        }
+
+        public String getNoDataText() {
+            return noDataText;
+        }
+
+        public void setNoDataText(String noDataText) {
+            this.noDataText = noDataText;
+        }
+
         public void setPageProvider(
                 SerializableBiFunction<Integer, Integer, String> provider) {
             this.pageProvider = provider;
@@ -1694,6 +1768,8 @@ public class BeanTable<T> extends HtmlComponent
             english.setLastPage("Last page");
             english.setPreviousPage("Previous page");
             english.setMenuButton("Column selector");
+            english.setErrorText("Failed fetching data");
+            english.setNoDataText("No data");            
             english.setPageProvider((currentPage, lastPage) -> "Page "
                     + currentPage + " of " + lastPage);
             return english;

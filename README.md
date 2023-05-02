@@ -38,6 +38,11 @@ The integration tests are in. These mainly cover some user interaction that cann
 
 ## Release notes
 
+### 3.1.3
+
+- Added an alert text for "No data" when the table is empty
+- Added an error alert text "Fetching data failed" when data provider fetch fails
+
 ### 3.1.2
 
 - Fix keyboard navigation getting lost with PreserveOnRefresh
