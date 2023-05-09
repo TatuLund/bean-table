@@ -797,6 +797,7 @@ public class BeanTableTest {
                 .mapToObj(i -> new DataItem("name" + i, "data" + i))
                 .collect(Collectors.toList());
         table.setItems(items);
+        table.setSelectionEnabled(true);
 
         selected = null;
         count = 0;
@@ -880,25 +881,36 @@ public class BeanTableTest {
 
         ui.add(table);
 
-        Assert.assertEquals("Failed fetching data",
-                table.bodyElement.getChild(0).getChild(0).getText());
+        Element alertCell = table.bodyElement.getChild(0).getChild(0);
+        Assert.assertEquals("Failed fetching data", alertCell.getText());
+        Assert.assertEquals("alert", alertCell.getAttribute("role"));
+        Assert.assertEquals("assertive", alertCell.getAttribute("aria-live"));
+        Assert.assertEquals("3", alertCell.getAttribute("colspan"));
     }
 
     private void assertSelectedThemeSet(BeanTable<DataItem> table,
             int... items) {
         for (int item : items) {
+            Element row = table.bodyElement.getChild(item);
             Assert.assertEquals("item at index " + item + " should be selected",
                     "selected",
-                    table.bodyElement.getChild(item).getAttribute("theme"));
+                    row.getAttribute("theme"));
+            for (int i=1;i<row.getChildCount();i++) {
+                Assert.assertEquals("true", row.getChild(i).getAttribute("aria-selected"));
+            }
         }
     }
 
     private void assertSelectedThemeNotSet(BeanTable<DataItem> table,
             int... items) {
         for (int item : items) {
+            Element row = table.bodyElement.getChild(item);
             Assert.assertEquals(
                     "item at index " + item + " should not be selected", null,
-                    table.bodyElement.getChild(item).getAttribute("theme"));
+                    row.getAttribute("theme"));
+            for (int i=1;i<row.getChildCount();i++) {
+                Assert.assertEquals("false", row.getChild(i).getAttribute("aria-selected"));
+            }
         }
     }
 

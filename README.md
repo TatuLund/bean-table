@@ -38,6 +38,10 @@ The integration tests are in. These mainly cover some user interaction that cann
 
 ## Release notes
 
+### 3.1.4
+
+- Fix A11y metadata update upon programmatic selection
+
 ### 3.1.3
 
 - Added an alert text for "No data" when the table is empty

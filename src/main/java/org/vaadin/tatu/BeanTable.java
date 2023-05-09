@@ -520,7 +520,8 @@ public class BeanTable<T> extends HtmlComponent
                     }
                 }
                 if (selectionEnabled) {
-                    cell.setAttribute("aria-selected", "false");
+                    cell.setAttribute("aria-selected",
+                            selected.contains(item) ? "true" : "false");
                 }
                 if (!column.isVisible()) {
                     cell.getStyle().set("display", "none");
@@ -614,7 +615,7 @@ public class BeanTable<T> extends HtmlComponent
         menuButton.setVisible(false);
         runBeforeClientResponse(ui -> {
             setNoData();
-        });        
+        });
     }
 
     private void enableKeyboardNavigation() {
@@ -1769,7 +1770,7 @@ public class BeanTable<T> extends HtmlComponent
             english.setPreviousPage("Previous page");
             english.setMenuButton("Column selector");
             english.setErrorText("Failed fetching data");
-            english.setNoDataText("No data");            
+            english.setNoDataText("No data");
             english.setPageProvider((currentPage, lastPage) -> "Page "
                     + currentPage + " of " + lastPage);
             return english;

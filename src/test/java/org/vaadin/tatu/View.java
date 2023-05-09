@@ -86,7 +86,7 @@ public class View extends VerticalLayout {
             newData.setText("Add " + nextYear);
         });
         RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
-        
+
         table.focus();
         add(plus, minus, table, newData, lazy);
     }
