@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.slf4j.LoggerFactory;
+
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEventListener;
@@ -23,6 +25,7 @@ import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
@@ -43,6 +46,7 @@ import com.vaadin.flow.dom.DomListenerRegistration;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.function.SerializableBiFunction;
 import com.vaadin.flow.function.SerializableComparator;
+import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.shared.Registration;
 
@@ -495,7 +499,8 @@ public class BeanTable<T> extends HtmlComponent
                     }
                 }
                 if (selectionEnabled) {
-                    cell.setAttribute("aria-selected", "false");
+                    cell.setAttribute("aria-selected",
+                            selected.contains(item) ? "true" : "false");
                 }
                 if (!column.isVisible()) {
                     cell.getStyle().set("display", "none");
@@ -581,9 +586,21 @@ public class BeanTable<T> extends HtmlComponent
         getElement().setAttribute("aria-labelledby", id);
         getElement().appendChild(captionElement);
         menu = new ContextMenu();
+        menu.addOpenedChangeListener(e -> {
+            if (!e.isOpened()) {
+                menuButton.focus();
+            }
+        });
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
+        runBeforeClientResponse(ui -> {
+            setNoData();
+        });
+    }
+
+    private void enableKeyboardNavigation() {
+        // Add JavaScript handling of the keyboard navigation
         bodyElement.executeJs("this.addEventListener('keydown', (e) => {"
                 + "if (e.keyCode == 39) {" + "e.preventDefault();"
                 + "let cell = document.activeElement;" + "do {"
@@ -753,6 +770,11 @@ public class BeanTable<T> extends HtmlComponent
                 });
     }
 
+    private void runBeforeClientResponse(SerializableConsumer<UI> command) {
+        getElement().getNode().runWhenAttached(ui -> ui
+                .beforeClientResponse(this, context -> command.accept(ui)));
+    }
+
     /**
      * Configure BeanTable to have columns with given set of property names.
      * 
@@ -835,7 +857,6 @@ public class BeanTable<T> extends HtmlComponent
                 item.addClickListener(e -> {
                     boolean hide = !item.isChecked();
                     updateColumnVisibility(column, hide);
-                    menuButton.focus();
                 });
                 item.getElement().getStyle().set("font-size",
                         "var(--lumo-font-size-m)");
@@ -1006,6 +1027,42 @@ public class BeanTable<T> extends HtmlComponent
         bodyElement.appendChild(rowItem.getRowElement());
     }
 
+    private void setNoData() {
+        if (rows.isEmpty()) {
+            bodyElement.setText("");
+            Element row = new Element("tr");
+            Element cell = createAlertCell();
+            cell.getClassList().add("no-data");
+            cell.setText(i18n != null && i18n.getNoDataText() != null
+                    ? i18n.getNoDataText()
+                    : "No data");
+            row.appendChild(cell);
+            bodyElement.appendChild(row);
+        }
+    }
+
+    // Called when data fetch failed, add an informative error for the user
+    private void setError() {
+        bodyElement.setText("");
+        Element row = new Element("tr");
+        Element cell = createAlertCell();
+        cell.getClassList().add("error-occurred");
+        cell.setText(i18n != null && i18n.getErrorText() != null
+                ? i18n.getErrorText()
+                : "Failed fetching data");
+        row.appendChild(cell);
+        bodyElement.appendChild(row);
+    }
+
+    private Element createAlertCell() {
+        Element cell = new Element("td");
+
+        cell.setAttribute("colspan", "" + (columns.size() + 1));
+        cell.setAttribute("aria-live", "assertive");
+        cell.setAttribute("role", "alert");
+        return cell;
+    }
+
     private void reset(boolean refresh) {
         if (!refresh) {
             bodyElement.setText("");
@@ -1030,12 +1087,25 @@ public class BeanTable<T> extends HtmlComponent
         }
         synchronized (dataProvider) {
             final AtomicInteger itemCounter = new AtomicInteger(0);
-            getDataProvider().fetch(query).map(row -> createRow((T) row))
-                    .forEach(rowItem -> {
-                        addRow((BeanTable<T>.RowItem<T>) rowItem,
-                                (currentPage * pageLength) + itemCounter.get());
-                        itemCounter.incrementAndGet();
-                    });
+            boolean error = false;
+            try {
+                getDataProvider().fetch(query).map(row -> createRow((T) row))
+                        .forEach(rowItem -> {
+                            addRow((BeanTable<T>.RowItem<T>) rowItem,
+                                    (currentPage * pageLength)
+                                            + itemCounter.get());
+                            itemCounter.incrementAndGet();
+                        });
+            } catch (Exception e) {
+                setError();
+                error = true;
+                LoggerFactory.getLogger(BeanTable.class)
+                        .error("Could not fetch data");
+                e.printStackTrace();
+            }
+            if (!error) {
+                setNoData();
+            }
             int lastFetchedDataSize = itemCounter.get();
             if (pageLength < 0) {
                 getElement().setAttribute("aria-rowcount",
@@ -1083,6 +1153,7 @@ public class BeanTable<T> extends HtmlComponent
                 && dataProviderListenerRegistration == null) {
             setupDataProviderListener(getDataProvider());
         }
+        enableKeyboardNavigation();
     }
 
     @Override
@@ -1247,8 +1318,8 @@ public class BeanTable<T> extends HtmlComponent
      * <p>
      * Note: If FocusBehavior.NONE used, then does nothing.
      * 
-     * @param row
-     * @param col
+     * @param row Index of Row to focus
+     * @param col Index of Column to focus
      */
     public void focus(int row, int col) {
         col++;
@@ -1457,6 +1528,8 @@ public class BeanTable<T> extends HtmlComponent
         private String nextPage;
         private String firstPage;
         private String menuButton;
+        private String errorText;
+        private String noDataText;
         private SerializableBiFunction<Integer, Integer, String> pageProvider;
 
         public String getLastPage() {
@@ -1503,6 +1576,22 @@ public class BeanTable<T> extends HtmlComponent
             this.menuButton = menuButton;
         }
 
+        public String getErrorText() {
+            return errorText;
+        }
+
+        public void setErrorText(String errorText) {
+            this.errorText = errorText;
+        }
+
+        public String getNoDataText() {
+            return noDataText;
+        }
+
+        public void setNoDataText(String noDataText) {
+            this.noDataText = noDataText;
+        }
+
         public void setPageProvider(
                 SerializableBiFunction<Integer, Integer, String> provider) {
             this.pageProvider = provider;
@@ -1515,6 +1604,8 @@ public class BeanTable<T> extends HtmlComponent
             english.setLastPage("Last page");
             english.setPreviousPage("Previous page");
             english.setMenuButton("Column selector");
+            english.setErrorText("Failed fetching data");
+            english.setNoDataText("No data");
             english.setPageProvider((currentPage, lastPage) -> "Page "
                     + currentPage + " of " + lastPage);
             return english;

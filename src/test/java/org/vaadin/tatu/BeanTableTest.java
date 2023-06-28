@@ -360,6 +360,12 @@ public class BeanTableTest {
         Assert.assertEquals("Next page", div.getChild(3).getAttribute("title"));
         Assert.assertEquals("Last page", div.getChild(4).getAttribute("title"));
 
+        // Assert that "No data" is shown when no match
+        dp.setFilter("bentz");
+        fakeClientCommunication();
+        Assert.assertEquals("No data",
+                table.bodyElement.getChild(0).getChild(0).getText());
+        Assert.assertEquals(0, table.footerElement.getChildCount());
     }
 
     @Test
@@ -509,6 +515,7 @@ public class BeanTableTest {
                 .mapToObj(i -> new DataItem("name" + i, "data" + i))
                 .collect(Collectors.toList());
         table.setItems(items);
+        table.setSelectionEnabled(true);
 
         selected = null;
         count = 0;
@@ -555,21 +562,70 @@ public class BeanTableTest {
         assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
+    @Test
+    public void emptyTable() {
+        BeanTable<DataItem> table = new BeanTable<>();
+        table.addColumn("Name", item -> item.getName());
+        table.addColumn("Data", item -> item.getData());
+
+        ui.add(table);
+        fakeClientCommunication();
+
+        Element alertCell = table.bodyElement.getChild(0).getChild(0);
+        Assert.assertEquals("No data", alertCell.getText());
+        Assert.assertEquals("alert", alertCell.getAttribute("role"));
+        Assert.assertEquals("assertive", alertCell.getAttribute("aria-live"));
+        Assert.assertEquals("3", alertCell.getAttribute("colspan"));
+    }
+
+    @Test
+    public void errorTable() {
+        // Note, an error and stacktrace will be logged when the test is run,
+        // that is intentional
+        FaultyDataService service = new FaultyDataService();
+        BeanTable<DataItem> table = new BeanTable<>(20);
+        table.addColumn("Name", item -> item.getName());
+        table.addColumn("Data", item -> item.getData());
+
+        CallbackDataProvider<DataItem, Void> dataProvider = DataProvider
+                .fromCallbacks(query -> service.fetchData(),
+                        query -> service.count());
+
+        table.setDataProvider(dataProvider);
+
+        ui.add(table);
+
+        Element alertCell = table.bodyElement.getChild(0).getChild(0);
+        Assert.assertEquals("Failed fetching data", alertCell.getText());
+        Assert.assertEquals("alert", alertCell.getAttribute("role"));
+        Assert.assertEquals("assertive", alertCell.getAttribute("aria-live"));
+        Assert.assertEquals("3", alertCell.getAttribute("colspan"));
+    }
+
     private void assertSelectedThemeSet(BeanTable<DataItem> table,
             int... items) {
         for (int item : items) {
+            Element row = table.bodyElement.getChild(item);
             Assert.assertEquals("item at index " + item + " should be selected",
-                    "selected",
-                    table.bodyElement.getChild(item).getAttribute("theme"));
+                    "selected", row.getAttribute("theme"));
+            for (int i = 1; i < row.getChildCount(); i++) {
+                Assert.assertEquals("true",
+                        row.getChild(i).getAttribute("aria-selected"));
+            }
         }
     }
 
     private void assertSelectedThemeNotSet(BeanTable<DataItem> table,
             int... items) {
         for (int item : items) {
+            Element row = table.bodyElement.getChild(item);
             Assert.assertEquals(
                     "item at index " + item + " should not be selected", null,
-                    table.bodyElement.getChild(item).getAttribute("theme"));
+                    row.getAttribute("theme"));
+            for (int i = 1; i < row.getChildCount(); i++) {
+                Assert.assertEquals("false",
+                        row.getChild(i).getAttribute("aria-selected"));
+            }
         }
     }
 
@@ -621,6 +677,24 @@ public class BeanTableTest {
 
         public void setData(String data) {
             this.data = data;
+        }
+    }
+
+    public class FaultyDataService {
+        FaultyDataRepository repository = new FaultyDataRepository();
+
+        public Stream<DataItem> fetchData() {
+            return repository.fetch().stream();
+        }
+
+        public int count() {
+            return 100;
+        }
+    }
+
+    public class FaultyDataRepository {
+        public List<DataItem> fetch() {
+            return null;
         }
     }
 

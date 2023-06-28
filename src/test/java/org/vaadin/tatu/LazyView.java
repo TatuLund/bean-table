@@ -17,9 +17,11 @@ import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 
+@PreserveOnRefresh
 @Route("lazy")
 public class LazyView extends VerticalLayout {
 
@@ -79,6 +81,8 @@ public class LazyView extends VerticalLayout {
             table.setSelectionEnabled(e.getValue());
         });
 
+        Checkbox click = new Checkbox("Click");
+
         MultiselectComboBox<BeanTableVariant> variants = new MultiselectComboBox<>(
                 "Variants");
         variants.setId("variants");
@@ -91,7 +95,7 @@ public class LazyView extends VerticalLayout {
 
         HorizontalLayout tools = new HorizontalLayout();
         tools.getElement().getStyle().set("align-items", "baseline");
-        tools.add(filter, variants, button, phoneNumber, selection);
+        tools.add(filter, variants, button, phoneNumber, selection, click);
 
         table.addSelectionChangedListener(event -> {
             String names = event.getSelected().stream()
@@ -99,6 +103,12 @@ public class LazyView extends VerticalLayout {
                     .collect(Collectors.joining(","));
             Notification.show("Selection size: " + event.getSelected().size()
                     + " Names: " + names);
+        });
+
+        table.addItemClickedListener(event -> {
+            if (click.getValue()) {
+                Notification.show("Clicked " + event.getItem().getFirstName());
+            }
         });
 
         RouterLink big = new RouterLink("Big table demo", BigTable.class);

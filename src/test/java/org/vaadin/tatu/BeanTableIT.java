@@ -6,6 +6,7 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
+import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
 
@@ -22,6 +23,48 @@ public class BeanTableIT extends AbstractViewTest {
     @Override
     public void setup() throws Exception {
         super.setup();
+    }
+
+    @Test
+    public void itemClick() {
+        TableElement table = $(TableElement.class).first();
+        CheckboxElement checkbox = $(CheckboxElement.class).get(2);
+
+        checkbox.setChecked(true);
+
+        Actions actions = new Actions(getDriver());
+
+        actions.click(table.getCell(1, 1)).perform();
+        Assert.assertEquals("Clicked Bentley", getLastNotificationText());
+
+        actions.click(table.getCell(2, 1)).perform();
+        Assert.assertEquals("Clicked Brandon", getLastNotificationText());
+
+        actions.sendKeys(Keys.ARROW_UP, Keys.SPACE).perform();
+        Assert.assertEquals("Clicked Bentley", getLastNotificationText());
+    }
+
+    @Test
+    public void preserveOnRefresh() {
+        Actions actions = new Actions(getDriver());
+
+        // Go to page 3
+        $(ButtonElement.class).first().click();
+
+        // Reload the page
+        getDriver().navigate().refresh();
+
+        // Table is still found
+        TableElement table = $(TableElement.class).first();
+
+        // Assert that keyboard navigation works and we are still
+        // on page 3
+        actions.click(table.getCell(1, 1)).perform();
+        Assert.assertEquals("Layla", focusedElement().getText());
+        actions.sendKeys(Keys.END).perform();
+        Assert.assertEquals("Washington", focusedElement().getText());
+        actions.sendKeys(Keys.HOME).perform();
+        Assert.assertEquals("Layla", focusedElement().getText());
     }
 
     @Test
@@ -207,6 +250,8 @@ public class BeanTableIT extends AbstractViewTest {
         for (int i = 0; i < 20; i++) {
             Assert.assertFalse(table.getCell(i, 3).isDisplayed());
         }
+        Assert.assertEquals("menu-button",
+                focusedElement().getAttribute("class"));
 
         Actions actions = new Actions(getDriver());
 

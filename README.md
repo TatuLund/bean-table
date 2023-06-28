@@ -28,6 +28,12 @@ src/test/java/org/vaadin/tatu/BeanTableTest.java
 
 ## Release notes
 
+### 1.5.0
+- Fix A11y metadata update upon programmatic selection
+- Added an alert text for "No data" when the table is empty
+- Added an alert text for "No data" when the table is empty
+- Added an alert text for "No data" when the table is empty
+
 ### 1.4.0
 - Add item click listener
 - Add selection event and API
