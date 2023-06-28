@@ -31,8 +31,8 @@ src/test/java/org/vaadin/tatu/BeanTableTest.java
 ### 1.5.0
 - Fix A11y metadata update upon programmatic selection
 - Added an alert text for "No data" when the table is empty
-- Added an alert text for "No data" when the table is empty
-- Added an alert text for "No data" when the table is empty
+- Added an error alert text "Fetching data failed" when data provider fetch fails
+- Fix keyboard navigation getting lost with PreserveOnRefresh
 
 ### 1.4.0
 - Add item click listener
