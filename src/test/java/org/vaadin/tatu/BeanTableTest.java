@@ -528,7 +528,7 @@ public class BeanTableTest {
         fakeClientCommunication();
         Assert.assertEquals("No data",
                 table.bodyElement.getChild(0).getChild(0).getText());
-        Assert.assertEquals(0, table.footerElement.getChildCount());    
+        Assert.assertEquals(0, table.footerElement.getChildCount());
     }
 
     @Test
@@ -754,10 +754,14 @@ public class BeanTableTest {
 
     @Test
     public void dataView() {
+        AtomicInteger refreshed = new AtomicInteger(0);
         BeanTable<String> table = new BeanTable<>();
         BeanTableListDataView<String> dataView = table.setItems("One", "Two",
                 "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
                 "Ten");
+        table.getDataProvider().addDataProviderListener(e -> {
+            refreshed.incrementAndGet();
+        });
 
         Assert.assertEquals(10, dataView.getItemCount());
         Assert.assertEquals("One", dataView.getItem(0));
@@ -769,6 +773,8 @@ public class BeanTableTest {
         Assert.assertEquals("Three", table.getGenericDataView().getItem(2));
 
         dataView.setFilter(item -> item.startsWith("T"));
+        Assert.assertEquals(1, refreshed.get());
+
         Assert.assertEquals(3, dataView.getItemCount());
         Assert.assertEquals("Two", dataView.getItem(0));
         Assert.assertEquals("Three", dataView.getItem(1));
@@ -851,7 +857,6 @@ public class BeanTableTest {
         assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
-
     @Test
     public void emptyTable() {
         BeanTable<DataItem> table = new BeanTable<>();
@@ -893,10 +898,10 @@ public class BeanTableTest {
         for (int item : items) {
             Element row = table.bodyElement.getChild(item);
             Assert.assertEquals("item at index " + item + " should be selected",
-                    "selected",
-                    row.getAttribute("theme"));
-            for (int i=1;i<row.getChildCount();i++) {
-                Assert.assertEquals("true", row.getChild(i).getAttribute("aria-selected"));
+                    "selected", row.getAttribute("theme"));
+            for (int i = 1; i < row.getChildCount(); i++) {
+                Assert.assertEquals("true",
+                        row.getChild(i).getAttribute("aria-selected"));
             }
         }
     }
@@ -908,8 +913,9 @@ public class BeanTableTest {
             Assert.assertEquals(
                     "item at index " + item + " should not be selected", null,
                     row.getAttribute("theme"));
-            for (int i=1;i<row.getChildCount();i++) {
-                Assert.assertEquals("false", row.getChild(i).getAttribute("aria-selected"));
+            for (int i = 1; i < row.getChildCount(); i++) {
+                Assert.assertEquals("false",
+                        row.getChild(i).getAttribute("aria-selected"));
             }
         }
     }
