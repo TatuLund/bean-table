@@ -21,15 +21,17 @@ import com.vaadin.flow.router.RouterLink;
 @Route("")
 public class View extends VerticalLayout {
 
+    private final Span yearLabel;
     int year = 2000;
     private List<MonthlyExpense> data;
     private int index = 0;
     private int nextYear = 2025;
-    private BeanTableListDataView<MonthlyExpense> dataView;
+
+    BeanTable<MonthlyExpense> table;
 
     public View() {
         setSizeFull();
-        BeanTable<MonthlyExpense> table = new BeanTable<>();
+        table = new BeanTable<>();
         table.setHtmlAllowed(true);
         table.setFocusBehavior(FocusBehavior.BODY);
         table.addColumn("Year", MonthlyExpense::getYear)
@@ -67,33 +69,36 @@ public class View extends VerticalLayout {
                 """)).setAlignment(ColumnAlignment.CENTER).setWidth("100px");
         // table.setColumns("year","month","expenses");
         data = generateData(25);
-        dataView = table.setItems(data);
         Button plus = new Button("+");
-        Span yearLabel = new Span();
+        yearLabel = new Span();
         Button minus = new Button("-");
         HorizontalLayout yearFilter = new HorizontalLayout(new Text("Year:"), plus, yearLabel, minus);
-        dataView.setFilter(expense -> expense.getYear() == year);
+        showYear(year);
         plus.addClickListener(event -> {
-            year++;
-            yearLabel.setText("" + year);
-            dataView.setFilter(expense -> expense.getYear() == year);
+            showYear(year + 1);
         });
         minus.addClickListener(event -> {
-            year--;
-            yearLabel.setText("" + year);
-            dataView.setFilter(expense -> expense.getYear() == year);
+            showYear(year - 1);
         });
         table.setWidthFull();
 
         Button newData = new Button("Add for year" + nextYear);
         newData.addClickListener(event -> {
-            dataView.addItems(generateMonthlyExpensesForYear(nextYear++));
+            data.addAll(generateMonthlyExpensesForYear(nextYear));
+            showYear(nextYear);
+            nextYear++;
             newData.setText("Add " + nextYear);
         });
         RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
 
         table.focus();
         add(yearFilter, table, newData, lazy);
+    }
+
+    private void showYear(int year) {
+        this.year = year;
+        table.setItems(data.stream().filter(expense -> expense.getYear() == year));
+        yearLabel.setText("" + year);
     }
 
     private HorizontalLayout createForm() {
@@ -117,7 +122,11 @@ public class View extends VerticalLayout {
         });
         save.addClickListener(event -> {
             data.get(index).setExpenses(expenseField.getValue());
-            dataView.refreshItem(data.get(index));
+            // Note, this is rather cumbersome and don't really
+            // provide any benefit over new setItems call
+            table.getGenericDataView().refreshItem(data.get(index));
+            //.. so this could simply be for example
+            // showYear(View.this.year);
         });
         layout.setWidthFull();
         layout.add(plus, minus, year, month, expenseField, save);
