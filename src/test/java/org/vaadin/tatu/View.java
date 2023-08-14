@@ -3,6 +3,7 @@ package org.vaadin.tatu;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.vaadin.flow.component.Text;
 import org.vaadin.tatu.BeanTable.ColumnAlignment;
 import org.vaadin.tatu.BeanTable.FocusBehavior;
 
@@ -65,30 +66,34 @@ public class View extends VerticalLayout {
                 <span style='color: blue'>Edit</span>
                 """)).setAlignment(ColumnAlignment.CENTER).setWidth("100px");
         // table.setColumns("year","month","expenses");
-        data = getData(25);
+        data = generateData(25);
         dataView = table.setItems(data);
         Button plus = new Button("+");
+        Span yearLabel = new Span();
         Button minus = new Button("-");
+        HorizontalLayout yearFilter = new HorizontalLayout(new Text("Year:"), plus, yearLabel, minus);
         dataView.setFilter(expense -> expense.getYear() == year);
         plus.addClickListener(event -> {
             year++;
+            yearLabel.setText("" + year);
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         minus.addClickListener(event -> {
             year--;
+            yearLabel.setText("" + year);
             dataView.setFilter(expense -> expense.getYear() == year);
         });
         table.setWidthFull();
 
-        Button newData = new Button("Add " + nextYear);
+        Button newData = new Button("Add for year" + nextYear);
         newData.addClickListener(event -> {
-            dataView.addItems(getNewData(nextYear++));
+            dataView.addItems(generateMonthlyExpensesForYear(nextYear++));
             newData.setText("Add " + nextYear);
         });
         RouterLink lazy = new RouterLink("Lazy load demo", LazyView.class);
 
         table.focus();
-        add(plus, minus, table, newData, lazy);
+        add(yearFilter, table, newData, lazy);
     }
 
     private HorizontalLayout createForm() {
@@ -126,29 +131,29 @@ public class View extends VerticalLayout {
         expenseField.setValue(expense.getExpenses());
     }
 
-    public List<MonthlyExpense> getData(int years) {
+    public List<MonthlyExpense> generateData(int years) {
         String[] monthNames = new java.text.DateFormatSymbols().getMonths();
         List<MonthlyExpense> data = new ArrayList<>();
         for (int year = 2000; year < (2000 + years); year++) {
             for (int month = 0; month < 12; month++) {
                 data.add(new MonthlyExpense(monthNames[month], year,
-                        getExpenses()));
+                        createRandomeNumberForExpenses()));
             }
         }
         return data;
     }
 
-    public List<MonthlyExpense> getNewData(int year) {
+    public List<MonthlyExpense> generateMonthlyExpensesForYear(int year) {
         String[] monthNames = new java.text.DateFormatSymbols().getMonths();
         List<MonthlyExpense> data = new ArrayList<>();
         for (int month = 0; month < 12; month++) {
             data.add(
-                    new MonthlyExpense(monthNames[month], year, getExpenses()));
+                    new MonthlyExpense(monthNames[month], year, createRandomeNumberForExpenses()));
         }
         return data;
     }
 
-    public Double getExpenses() {
+    public Double createRandomeNumberForExpenses() {
         return Math.floor((Math.random() * 1000) % 500 + 300);
     }
 
