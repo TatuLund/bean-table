@@ -7,7 +7,7 @@
 	<name>BeanTable</name>
 	<description>Table component for Vaadin platform</description>
 	<properties>
-		<vaadin.version>24.0.2</vaadin.version>
+		<vaadin.version>24.1.7</vaadin.version>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -104,7 +104,7 @@
 		<dependency>
 			<groupId>io.github.bonigarcia</groupId>
 			<artifactId>webdrivermanager</artifactId>
-			<version>5.1.0</version>
+			<version>5.4.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
