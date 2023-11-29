@@ -2,7 +2,7 @@
     font-weight: 700;
     background: var(--lumo-contrast-5pct);
     position: relative;
-    height: 30px;
+    height: var(--lumo-size-xs);
 }
 
 .bean-table thead tr {

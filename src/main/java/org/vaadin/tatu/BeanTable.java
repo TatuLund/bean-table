@@ -488,8 +488,8 @@ public class BeanTable<T> extends HtmlComponent
                     rowElement.getChildren().forEach(
                             cell -> cell.setAttribute("aria-selected", "true"));
                 }
-                fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
-                        true));
+                fireEvent(new BeanTableSelectionChangedEvent<>(BeanTable.this,
+                        selected, true));
             }
         }
 
@@ -1369,7 +1369,7 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     private String randomId(String prefix, int chars) {
-        int limit = (10 * chars) - 1;
+        int limit = (int) (Math.pow(10, chars) - 1);
         String key = "" + rand.nextInt(limit);
         key = String.format("%" + chars + "s", key).replace(' ', '0');
         return prefix + "-" + key;
@@ -1472,8 +1472,8 @@ public class BeanTable<T> extends HtmlComponent
      * <p>
      * Note: If FocusBehavior.NONE used, then does nothing.
      * 
-     * @param row
-     * @param col
+     * @param row int value
+     * @param col int value
      */
     public void focus(int row, int col) {
         if (focusBehavior != FocusBehavior.NONE) {
@@ -1587,8 +1587,8 @@ public class BeanTable<T> extends HtmlComponent
         }
         if (added) {
             getDataProvider().refreshAll();
-            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
-                    false));
+            fireEvent(new BeanTableSelectionChangedEvent<>(BeanTable.this,
+                    selected, false));
         }
     }
 
@@ -1609,8 +1609,8 @@ public class BeanTable<T> extends HtmlComponent
         }
         if (removed) {
             getDataProvider().refreshAll();
-            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
-                    false));
+            fireEvent(new BeanTableSelectionChangedEvent<>(BeanTable.this,
+                    selected, false));
         }
     }
 
@@ -1620,8 +1620,8 @@ public class BeanTable<T> extends HtmlComponent
     public void deselectAll() {
         if (!selected.isEmpty()) {
             selected.clear();
-            fireEvent(new SelectionChangedEvent<>(BeanTable.this, selected,
-                    false));
+            fireEvent(new BeanTableSelectionChangedEvent<>(BeanTable.this,
+                    selected, false));
             getDataProvider().refreshAll();
         }
     }
@@ -1667,8 +1667,9 @@ public class BeanTable<T> extends HtmlComponent
      */
     @SuppressWarnings("unchecked")
     public Registration addSelectionChangedListener(
-            ComponentEventListener<SelectionChangedEvent<T, BeanTable<T>>> listener) {
-        return ComponentUtil.addListener(this, SelectionChangedEvent.class,
+            ComponentEventListener<BeanTableSelectionChangedEvent<T, BeanTable<T>>> listener) {
+        return ComponentUtil.addListener(this,
+                BeanTableSelectionChangedEvent.class,
                 (ComponentEventListener) listener);
     }
 
@@ -1686,6 +1687,9 @@ public class BeanTable<T> extends HtmlComponent
                 (ComponentEventListener) listener);
     }
 
+    /**
+     * Localization object for BeanTable
+     */
     @SuppressWarnings("serial")
     public static class BeanTableI18n implements Serializable {
         private String lastPage;
@@ -1762,6 +1766,11 @@ public class BeanTable<T> extends HtmlComponent
             this.pageProvider = provider;
         }
 
+        /**
+         * Generate the default English localization.
+         * 
+         * @return localization object
+         */
         public static BeanTableI18n getDefault() {
             BeanTableI18n english = new BeanTableI18n();
             english.setFirstPage("First page");
