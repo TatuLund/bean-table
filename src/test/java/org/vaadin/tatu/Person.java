@@ -27,6 +27,7 @@ public class Person implements Cloneable {
         this.age = age;
         this.address = address;
         this.phoneNumber = phoneNumber;
+        this.email = firstName + "." + lastName + "@" + "foo.org";
     }
 
     public Person(int id, String firstName, String lastName, int age,
@@ -41,6 +42,7 @@ public class Person implements Cloneable {
         this.phoneNumber = phoneNumber;
         this.maritalStatus = maritalStatus;
         this.birthDate = birthDate;
+        this.email = firstName + "." + lastName + "@" + "foo.org";
     }
 
     public int getId() {

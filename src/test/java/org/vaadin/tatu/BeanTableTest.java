@@ -1,7 +1,9 @@
 package org.vaadin.tatu;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
@@ -199,6 +201,9 @@ public class BeanTableTest {
 
         ui.add(table);
         fakeClientCommunication();
+
+        Assert.assertEquals("Name",
+                table.headerElement.getChild(0).getChild(1).getText());
 
         AtomicInteger counter = new AtomicInteger(0);
         table.bodyElement.getChildren().forEach(row -> {
@@ -562,10 +567,21 @@ public class BeanTableTest {
     }
 
     @Test
-    public void tableSerializable() throws IOException {
+    public void tableSerializable() throws IOException, ClassNotFoundException {
         BeanTable<String> table = new BeanTable<>();
         table.addColumn("Hello", item -> "Hello");
-        new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(table);
+        table.setItems("World");
+        var bs = new ByteArrayOutputStream();
+        var os = new ObjectOutputStream(bs);
+        os.writeObject(table);
+        os.flush();
+        os.close();
+
+        var a = bs.toByteArray();
+        ByteArrayInputStream bis = new ByteArrayInputStream(a);
+        ObjectInputStream in = new ObjectInputStream(bis);
+        var v = (BeanTable<String>) in.readObject();
+        Assert.assertEquals("World", v.getListDataView().getItem(0));
     }
 
     @Test

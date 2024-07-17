@@ -869,6 +869,7 @@ public class BeanTable<T> extends HtmlComponent
         Objects.requireNonNull(componentProvider,
                 "A componentProvider must not be null");
         Column<T> column = new Column<>();
+        column.setHeader(header);
         column.setComponentProvider(componentProvider);
         columns.add(column);
         updateHeader();
