@@ -510,13 +510,13 @@ public class BeanTable<T> extends HtmlComponent
                     cell = new Element("th");
                     cell.setAttribute("role", "rowheader");
                     if (focusBehavior == FocusBehavior.BODY_AND_HEADER) {
-                        cell.setAttribute("tabindex", "0");
+                        cell.setAttribute("tabindex", "-1");
                     }
                 } else {
                     cell = new Element("td");
                     cell.setAttribute("role", "cell");
                     if (focusBehavior != FocusBehavior.NONE) {
-                        cell.setAttribute("tabindex", "0");
+                        cell.setAttribute("tabindex", "-1");
                     }
                 }
                 if (selectionEnabled) {
@@ -622,43 +622,60 @@ public class BeanTable<T> extends HtmlComponent
         // Add JavaScript handling of the keyboard navigation
         bodyElement.executeJs(
                 """
+                        this.addEventListener('click', (e) => {
+                          Array.from(this.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
+                          const cell = e.target;
+                          cell.setAttribute('tabindex','0');
+                        });
                         this.addEventListener('keydown', (e) => {
                           if (e.keyCode == 39) {
                             e.preventDefault();
                             let cell = document.activeElement;
+                            const previous = cell;
                             do {
                               cell = cell.nextSibling;
-                            } while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));
+                            } while (cell && (cell.style.display === 'none'));
                             if (cell) {
+                              previous.setAttribute('tabindex','-1');
+                              cell.setAttribute('tabindex','0');
                               cell.focus();
                             }
                           } else if (e.keyCode == 37) {
                             e.preventDefault();
                             let cell = document.activeElement;
+                            const previous = cell;
                             do {
                               cell = cell.previousSibling;
-                            } while (cell && (cell.style.display === 'none' || cell.tabIndex == -1));
+                            } while (cell && (cell.style.display === 'none'));
                             if (cell) {
+                              previous.setAttribute('tabindex','-1');
+                              cell.setAttribute('tabindex','0');
                               cell.focus();
                             }
                           } else if (e.keyCode == 36) {
                             e.preventDefault();
                             let row = document.activeElement.closest('tr');
                             let col=1;
+                            const previous = row.cells[col];
                             while (col < row.cells.length-1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {
                               col++;
                             }
                             if (row) {
+                              previous.setAttribute('tabindex','-1');
+                              row.cells[col].setAttribute('tabindex','0');
                               row.cells[col].focus();
                             }
                           } else if (e.keyCode == 35) {
                             e.preventDefault();
                             let row = document.activeElement.closest('tr');
                             let col=row.cells.length-1;
+                            const previous = row.cells[col];
                             while (col > 1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {
                               col--;
                             }
                             if (row) {
+                              previous.setAttribute('tabindex','-1');
+                              row.cells[col].setAttribute('tabindex','0');
                               row.cells[col].focus();
                             }
                           } else if (e.keyCode == 40) {
@@ -666,7 +683,10 @@ public class BeanTable<T> extends HtmlComponent
                             let col = document.activeElement.cellIndex;
                             let rowIndex = document.activeElement.closest('tr').rowIndex;
                             let row = this.rows[rowIndex];
+                            const previous = this.rows[rowIndex-1].cells[col];
                             if (row) {
+                              previous.setAttribute('tabindex','-1');
+                              row.cells[col].setAttribute('tabindex','0');
                               row.cells[col].focus();
                             }
                           } else if (e.keyCode == 38) {
@@ -674,7 +694,10 @@ public class BeanTable<T> extends HtmlComponent
                             let col = document.activeElement.cellIndex;
                             let rowIndex = document.activeElement.closest('tr').rowIndex;
                             let row = this.rows[rowIndex - 2];
+                            const previous = this.rows[rowIndex-1].cells[col];
                             if (row) {
+                              previous.setAttribute('tabindex','-1');
+                              row.cells[col].setAttribute('tabindex','0');
                               row.cells[col].focus();
                             }
                           }
@@ -996,7 +1019,7 @@ public class BeanTable<T> extends HtmlComponent
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
             if (focusBehavior != focusBehavior.NONE) {
-                spacer.getElement().setAttribute("tabindex", "0");
+                spacer.getElement().setAttribute("tabindex", "-1");
             }
             if (i18n != null && i18n.getPageProvider() != null) {
                 spacer.setText(i18n.getPageProvider().apply(currentPage + 1,
@@ -1481,15 +1504,17 @@ public class BeanTable<T> extends HtmlComponent
             col++;
             bodyElement.executeJs("""
                     setTimeout(function(){
+                      Array.from($0.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
                       let row = $0.rows[$1];
                       if (row) {
                         let cell = row.cells[$2];
                         if (cell) {
+                          cell.setAttribute('tabindex','0');
                           cell.click();
                           cell.focus()
                         }
                       }
-                    }, 0)
+                    }, 0);
                             """, bodyElement, row, col);
         }
     }
