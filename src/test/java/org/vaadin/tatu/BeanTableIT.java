@@ -15,6 +15,8 @@ import org.openqa.selenium.interactions.Actions;
 import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
+import com.vaadin.flow.component.contextmenu.testbench.ContextMenuElement;
+import com.vaadin.flow.component.contextmenu.testbench.ContextMenuOverlayElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
 import com.vaadin.testbench.screenshot.ImageFileUtil;
 
@@ -34,6 +36,35 @@ public class BeanTableIT extends AbstractViewTest {
 
         // Hide dev mode gizmo, it would interfere screenshot tests
         $("vaadin-dev-tools").first().setProperty("hidden", true);
+    }
+
+    @Test
+    public void canTabToTheFirsDataCell() {
+        TableElement table = $(TableElement.class).first();
+        Actions actions = new Actions(getDriver());
+
+        actions.click(table.getCell(0, 1)).perform();
+        Assert.assertEquals("First Name", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Last Name", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Age", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Phone Number", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Marital Status", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Postal Code", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("City", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("vaadin-button", focusedElement().getTagName());
+        Assert.assertEquals("menu-button",
+                focusedElement().getDomAttribute("class"));
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("Bentley", focusedElement().getText());
+        actions.sendKeys(Keys.TAB).perform();
+        Assert.assertEquals("vaadin-button", focusedElement().getTagName());
     }
 
     @Test

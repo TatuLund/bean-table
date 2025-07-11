@@ -84,6 +84,7 @@ import com.vaadin.flow.shared.Registration;
  *            Bean type for the Table
  */
 
+@SuppressWarnings("serial")
 @CssImport("./styles/bean-table.css")
 @Tag("table")
 public class BeanTable<T> extends HtmlComponent
@@ -102,12 +103,12 @@ public class BeanTable<T> extends HtmlComponent
     private boolean htmlAllowed;
     private Class<T> beanType;
     private PropertySet<T> propertySet;
-    private int pageLength = -1;
+    int pageLength = -1;
     private int currentPage = 0;
-    private Object filter;
-    private SerializableComparator<T> inMemorySorting;
+    Object filter;
+    SerializableComparator<T> inMemorySorting;
 
-    private final ArrayList<QuerySortOrder> backEndSorting = new ArrayList<>();
+    final ArrayList<QuerySortOrder> backEndSorting = new ArrayList<>();
     private int dataProviderSize = -1;
     private StringProvider<T> classNameProvider;
     private BeanTableLazyDataView<T> lazyDataView;
@@ -473,6 +474,7 @@ public class BeanTable<T> extends HtmlComponent
         }
 
         // Package protected for enabling unit testing
+        @SuppressWarnings("unchecked")
         void toggleSelection() {
             if (selectionEnabled) {
                 if (selected.contains(item)) {
@@ -493,6 +495,7 @@ public class BeanTable<T> extends HtmlComponent
             }
         }
 
+        @SuppressWarnings("unchecked")
         private void createCells() {
             Element indexCell = new Element("td");
             indexCell.getClassList().add("index");
@@ -551,13 +554,9 @@ public class BeanTable<T> extends HtmlComponent
                 if (component != null) {
                     cell.appendChild(component.getElement());
                 } else if (column.tooltipProvider != null) {
-                    String key = randomId("tooltip", 8);
                     String tooltipText = column.getTooltipProvider()
                             .apply((T) item);
-                    Html span = new Html("<span id='" + key + "'>"
-                            + value.toString() + "<vaadin-tooltip text='"
-                            + tooltipText + "' for='" + key
-                            + "'></vaadin-tooltip></span>");
+                    Html span = wrapWithTooltip(value, tooltipText);
                     cell.appendChild(span.getElement());
                 } else if (htmlAllowed) {
                     Html span = new Html(
@@ -568,6 +567,14 @@ public class BeanTable<T> extends HtmlComponent
                 }
                 rowElement.appendChild(cell);
             });
+        }
+
+        private Html wrapWithTooltip(Object value, String tooltipText) {
+            String key = randomId("tooltip", 8);
+            var content = String.format(
+                    "<span id='%s'>%s<vaadin-tooltip text='%s' for='%s'></vaadin-tooltip></span>",
+                    key, value.toString(), tooltipText, key);
+            return new Html(content);
         }
 
         public R getItem() {
@@ -1140,6 +1147,7 @@ public class BeanTable<T> extends HtmlComponent
         return cell;
     }
 
+    @SuppressWarnings("unchecked")
     void reset(boolean refresh) {
         if (!refresh) {
             bodyElement.setText("");
@@ -1174,9 +1182,10 @@ public class BeanTable<T> extends HtmlComponent
             try {
                 getDataProvider().fetch(query).map(row -> createRow((T) row))
                         .forEach(rowItem -> {
-                            addRow((BeanTable<T>.RowItem<T>) rowItem,
-                                    (currentPage * pageLength)
-                                            + itemCounter.get());
+                            int rowIndex = itemCounter.get();
+                            RowItem<T> row = ((RowItem<T>) rowItem);
+                            setTabIndex1FirstDataCellOnFirstRow(rowIndex, row);
+                            addRow(row, (currentPage * pageLength) + rowIndex);
                             itemCounter.incrementAndGet();
                         });
             } catch (Exception e) {
@@ -1206,6 +1215,14 @@ public class BeanTable<T> extends HtmlComponent
                 // multiple size change events during server round trips
                 runBeforeClientResponse(sizeRequest);
             }
+        }
+    }
+
+    private void setTabIndex1FirstDataCellOnFirstRow(int rowIndex,
+            RowItem<T> row) {
+        if (rowIndex == 0) {
+            row.getRowElement().getChildren().skip(1).findFirst()
+                    .ifPresent(cell -> cell.setAttribute("tabindex", "0"));
         }
     }
 
@@ -1496,26 +1513,30 @@ public class BeanTable<T> extends HtmlComponent
      * <p>
      * Note: If FocusBehavior.NONE used, then does nothing.
      * 
-     * @param row int value
-     * @param col int value
+     * @param row
+     *            int value
+     * @param col
+     *            int value
      */
     public void focus(int row, int col) {
         if (focusBehavior != FocusBehavior.NONE) {
             col++;
-            bodyElement.executeJs("""
-                    setTimeout(function(){
-                      Array.from($0.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
-                      let row = $0.rows[$1];
-                      if (row) {
-                        let cell = row.cells[$2];
-                        if (cell) {
-                          cell.setAttribute('tabindex','0');
-                          cell.click();
-                          cell.focus()
-                        }
-                      }
-                    }, 0);
-                            """, bodyElement, row, col);
+            bodyElement.executeJs(
+                    """
+                            setTimeout(function(){
+                              Array.from($0.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
+                              let row = $0.rows[$1];
+                              if (row) {
+                                let cell = row.cells[$2];
+                                if (cell) {
+                                  cell.setAttribute('tabindex','0');
+                                  cell.click();
+                                  cell.focus()
+                                }
+                              }
+                            }, 0);
+                                    """,
+                    bodyElement, row, col);
         }
     }
 

@@ -7,12 +7,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -58,12 +58,11 @@ public class BeanTableTest {
     @Test
     public void basicBeanTable() {
         BeanTable<DataItem> table = new BeanTable<>();
-        table.addColumn("Name", item -> item.getName()).setRowHeader(true);
+        table.addColumn("Name", DataItem::getName).setRowHeader(true);
         BeanTable<DataItem>.Column<DataItem> col = table.addColumn("Data",
-                item -> item.getData());
+                DataItem::getData);
         List<DataItem> items = IntStream.range(0, 10)
-                .mapToObj(i -> new DataItem("name" + i, "data" + i))
-                .collect(Collectors.toList());
+                .mapToObj(i -> new DataItem("name" + i, "data" + i)).toList();
         table.setItems(items);
         table.setCaption("Items");
         ui.add(table);
@@ -79,8 +78,7 @@ public class BeanTableTest {
         BeanTable<DataRecord>.Column<DataRecord> col = table.addColumn("Data",
                 item -> item.data);
         List<DataRecord> items = IntStream.range(0, 10)
-                .mapToObj(i -> new DataRecord("name" + i, "data" + i))
-                .collect(Collectors.toList());
+                .mapToObj(i -> new DataRecord("name" + i, "data" + i)).toList();
         table.setItems(items);
         table.setCaption("Items");
         ui.add(table);
@@ -89,6 +87,7 @@ public class BeanTableTest {
         assertBasicTable(table, col);
     }
 
+    @SuppressWarnings("rawtypes")
     private void assertBasicTable(BeanTable table, Column col) {
         // Assert the top level DOM
         Assert.assertEquals("table", table.getElement().getTag());
@@ -154,6 +153,7 @@ public class BeanTableTest {
         Assert.assertTrue(table.menu.getItems().get(1).isChecked());
     }
 
+    @SuppressWarnings("rawtypes")
     private void assertBodyStrucure(BeanTable table, String display) {
         // Helper method to assert the body DOM
         AtomicInteger counter = new AtomicInteger(0);
@@ -194,8 +194,7 @@ public class BeanTableTest {
             return div;
         });
         List<DataItem> items = IntStream.range(0, 10)
-                .mapToObj(i -> new DataItem("name" + i, "data" + i))
-                .collect(Collectors.toList());
+                .mapToObj(i -> new DataItem("name" + i, "data" + i)).toList();
         table.setItems(items);
         table.setCaption("Items");
 
@@ -230,12 +229,11 @@ public class BeanTableTest {
     public void beanTableWithHtmlAndTooltips() {
         BeanTable<DataItem> table = new BeanTable<>();
         table.setHtmlAllowed(true);
-        table.addColumn("Name", item -> item.getName())
-                .setTooltipProvider(item -> item.getName());
+        table.addColumn("Name", DataItem::getName)
+                .setTooltipProvider(DataItem::getName);
         table.addColumn("Data", item -> "<b>" + item.getData() + "</b>");
         List<DataItem> items = IntStream.range(0, 10)
-                .mapToObj(i -> new DataItem("name" + i, "data" + i))
-                .collect(Collectors.toList());
+                .mapToObj(i -> new DataItem("name" + i, "data" + i)).toList();
         table.setItems(items);
         table.setCaption("Items");
 
@@ -277,8 +275,8 @@ public class BeanTableTest {
         AtomicInteger fetches = new AtomicInteger(0);
         table.setItems(query -> {
             fetches.incrementAndGet();
-            return personService
-                    .fetch(query.getOffset(), query.getLimit(), null).stream();
+            return personService.fetch(query.getOffset(), query.getLimit(),
+                    Optional.empty()).stream();
         });
         table.getLazyDataView().setItemCountEstimate(100);
 
@@ -361,8 +359,14 @@ public class BeanTableTest {
                 table.bodyElement.getChild(0).getChild(0).getText());
         Assert.assertEquals(9, table.bodyElement.getChildCount());
 
+        table.getLazyDataView().setItemIndexProvider(
+                (item, query) -> personService.fetchAll().indexOf(item));
         // Can get nth item, on different pages, hence two fetches
         Person item = table.getLazyDataView().getItem(40);
+        var page = table.getLazyDataView().getPageIndex(item);
+        var index = table.getLazyDataView().getItemIndex(item);
+        Assert.assertEquals(Integer.valueOf(40), index.get());
+        Assert.assertEquals(Integer.valueOf(2), page.get());
         Assert.assertEquals("Layla", item.getFirstName());
         item = table.getLazyDataView().getItem(2);
         Assert.assertEquals("Brayden", item.getFirstName());
@@ -484,7 +488,8 @@ public class BeanTableTest {
         Assert.assertEquals(2, table.getPage());
 
         // Set filter
-        dp.setFilter("ben");
+        var filter = "ben";
+        dp.setFilter(filter);
         fakeClientCommunication();
 
         // Assert that page is now the first one
@@ -512,6 +517,14 @@ public class BeanTableTest {
         Person item = dataView.getItem(2);
         Assert.assertEquals("Bentley", item.getFirstName());
 
+        // Lazy data view itself does not support filtering by Query, but we are
+        // testing that item index provider can be used nevertheless.
+        BeanTableLazyDataView<Person> lazyView = table.getLazyDataView();
+        lazyView.setItemIndexProvider((i, query) -> personService
+                .fetch(0, Integer.MAX_VALUE, Optional.of(filter)).indexOf(i));
+        var index = table.getLazyDataView().getItemIndex(item).get();
+        Assert.assertEquals(Integer.valueOf(2), index);
+
         // Assert localized tooltips of the footer
         Assert.assertEquals("8", table.footerElement.getChild(0).getChild(0)
                 .getAttribute("colspan"));
@@ -536,6 +549,7 @@ public class BeanTableTest {
         Assert.assertEquals(0, table.footerElement.getChildCount());
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     public void addThemeVariant_themeNamesContainsThemeVariant() {
         BeanTable table = new BeanTable();
@@ -546,6 +560,7 @@ public class BeanTableTest {
                 themeNames.contains(BeanTableVariant.PADDING.getVariantName()));
     }
 
+    @SuppressWarnings("rawtypes")
     @Test
     public void addThemeVariant_removeThemeVariant_themeNamesDoesNotContainThemeVariant() {
         BeanTable table = new BeanTable();
@@ -580,6 +595,7 @@ public class BeanTableTest {
         var a = bs.toByteArray();
         ByteArrayInputStream bis = new ByteArrayInputStream(a);
         ObjectInputStream in = new ObjectInputStream(bis);
+        @SuppressWarnings("unchecked")
         var v = (BeanTable<String>) in.readObject();
         Assert.assertEquals("World", v.getListDataView().getItem(0));
     }
@@ -592,11 +608,10 @@ public class BeanTableTest {
     }
 
     @Test
-    public void toggleSelection() throws IOException {
+    public void toggleSelection() {
         BeanTable<DataItem> table = new BeanTable<>();
         List<DataItem> items = Arrays.asList("One", "Two", "Three").stream()
-                .map(data -> new DataItem(data, data))
-                .collect(Collectors.toList());
+                .map(data -> new DataItem(data, data)).toList();
         table.setItems(items);
         table.setSelectionEnabled(true);
         ui.add(table);
@@ -635,7 +650,7 @@ public class BeanTableTest {
     public void refreshItem() {
         BeanTable<TestItem> table = new BeanTable<>();
         Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
-                .map(data -> new TestItem(data));
+                .map(TestItem::new);
         table.addColumn("Number", TestItem::getData);
         table.setItems(items);
         table.getGenericDataView().setIdentifierProvider(TestItem::getId);
@@ -671,7 +686,7 @@ public class BeanTableTest {
     public void menuButton() {
         BeanTable<TestItem> table = new BeanTable<>();
         Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
-                .map(data -> new TestItem(data));
+                .map(TestItem::new);
         table.addColumn("Number", TestItem::getData).setKey("number");
         table.setItems(items);
 
@@ -700,10 +715,10 @@ public class BeanTableTest {
     public void column() {
         BeanTable<TestItem> table = new BeanTable<>();
         Stream<TestItem> items = Arrays.asList("One", "Two", "Three").stream()
-                .map(data -> new TestItem(data));
+                .map(TestItem::new);
         // Configure column
         table.addColumn("Number", TestItem::getData)
-                .setClassNameProvider(item -> item.getData())
+                .setClassNameProvider(TestItem::getData)
                 .setAlignment(ColumnAlignment.RIGHT).setHeader("Header")
                 .setWidth("100px");
         table.setClassNameProvider(item -> "class");
@@ -812,12 +827,11 @@ public class BeanTableTest {
     public void selection() {
         BeanTable<DataItem> table = new BeanTable<>();
         table.setHtmlAllowed(true);
-        table.addColumn("Name", item -> item.getName())
-                .setTooltipProvider(item -> item.getName());
+        table.addColumn("Name", DataItem::getName)
+                .setTooltipProvider(DataItem::getName);
         table.addColumn("Data", item -> "<b>" + item.getData() + "</b>");
         List<DataItem> items = IntStream.range(0, 10)
-                .mapToObj(i -> new DataItem("name" + i, "data" + i))
-                .collect(Collectors.toList());
+                .mapToObj(i -> new DataItem("name" + i, "data" + i)).toList();
         table.setItems(items);
         table.setSelectionEnabled(true);
 
@@ -876,8 +890,8 @@ public class BeanTableTest {
     @Test
     public void emptyTable() {
         BeanTable<DataItem> table = new BeanTable<>();
-        table.addColumn("Name", item -> item.getName());
-        table.addColumn("Data", item -> item.getData());
+        table.addColumn("Name", DataItem::getName);
+        table.addColumn("Data", DataItem::getData);
 
         ui.add(table);
         fakeClientCommunication();
@@ -895,8 +909,8 @@ public class BeanTableTest {
         // that is intentional
         FaultyDataService service = new FaultyDataService();
         BeanTable<DataItem> table = new BeanTable<>(20);
-        table.addColumn("Name", item -> item.getName());
-        table.addColumn("Data", item -> item.getData());
+        table.addColumn("Name", DataItem::getName);
+        table.addColumn("Data", DataItem::getData);
         table.setItems(query -> service.fetchPersons());
         table.getLazyDataView().setItemCountEstimate(100);
 
@@ -1010,6 +1024,7 @@ public class BeanTableTest {
         });
     }
 
+    @SuppressWarnings("serial")
     public static class MockUI extends UI {
 
         public MockUI() {
@@ -1036,6 +1051,7 @@ public class BeanTableTest {
         }
     }
 
+    @SuppressWarnings("serial")
     public static class AlwaysLockedVaadinSession extends MockVaadinSession {
 
         public AlwaysLockedVaadinSession(VaadinService service) {
@@ -1044,6 +1060,7 @@ public class BeanTableTest {
         }
     }
 
+    @SuppressWarnings("serial")
     public static class MockVaadinSession extends VaadinSession {
         /*
          * Used to make sure there's at least one reference to the mock session

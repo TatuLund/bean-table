@@ -1,10 +1,11 @@
 package org.vaadin.tatu;
 
-import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.Push;
 import com.vaadin.flow.theme.Theme;
 
-public class MainLayout extends AppLayout {
+@Push
+@Theme("mytheme")
+public class Config implements AppShellConfigurator {
 
 }
