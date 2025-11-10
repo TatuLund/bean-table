@@ -1,0 +1,240 @@
+/* BeanTable common styles */
+
+.bean-table thead tr {
+  height: 0px;
+}
+
+.bean-table tbody td {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bean-table .index {
+  display: none;
+}
+
+.bean-table[theme~="row-index"] .index {
+  display: table-cell;
+  font-weight: 700;
+}
+
+.bean-table tbody th {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bean-table[theme~="wrap-cell-content"] tbody td {
+  white-space: normal;
+}
+
+.bean-table[theme~="wrap-cell-content"] tbody th {
+  white-space: normal;
+}
+
+.bean-table {
+  border-collapse: collapse;
+  --bean-table-padding-s: 4px;
+  --bean-table-padding-xs: 2px;
+  --bean-table-border-color: #d9d9d9;
+  --bean-table-focus-color: #4d90fe;
+  --bean-table-selected-row-background: #cce4ff;
+  --bean-table-striped-row-background: #f5f5f5;
+}
+
+.bean-table-paging {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.bean-table-page {
+  flex-grow: 1;
+  text-align: center;
+}
+
+.bean-table .menu-button {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  z-index: 1;
+}
+
+.bean-table caption {
+  font-weight: 500;
+  transition: color 0.2s;
+  line-height: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-right: 1em;
+  padding-bottom: 0.5em;
+}
+
+.bean-table td.error-occurred {
+  text-align: center;
+  font-weight: 500;
+}
+
+.bean-table td.no-data {
+  text-align: center;
+  font-weight: 500;
+}
+
+.bean-table[theme~="padding"] thead th {
+  padding-top: var(--bean-table-padding-s);
+  padding-bottom: var(--bean-table-padding-s);
+  padding-left: var(--bean-table-padding-xs);
+  padding-right: var(--bean-table-padding-xs);
+}
+
+.bean-table[theme~="padding"] tbody td {
+  padding-left: var(--bean-table-padding-s);
+  padding-right: var(--bean-table-padding-s);
+}
+
+.bean-table[theme~="padding"] .menu-button {
+  top: var(--bean-table-padding-s);
+  right: var(--bean-table-padding-xs);
+}
+
+.bean-table thead {
+  font-weight: 700;
+  position: relative;
+}
+
+.bean-table:not([theme~="no-row-borders"]) td {
+  border-top: 1px solid var(--bean-table-border-color);
+  border-bottom: 1px solid var(--bean-table-border-color);
+}
+
+.bean-table[theme~="column-borders"] td {
+  border-right: 1px solid var(--bean-table-border-color);
+  border-left: 1px solid var(--bean-table-border-color);
+}
+
+.bean-table:not([theme~="no-row-borders"]) th {
+  border-top: 1px solid var(--bean-table-border-color);
+  border-bottom: 1px solid var(--bean-table-border-color);
+}
+
+.bean-table[theme~="column-borders"] th {
+  border-right: 1px solid var(--bean-table-border-color);
+  border-left: 1px solid var(--bean-table-border-color);
+}
+
+.bean-table:not([theme~="no-border"]) {
+  border: 1px solid var(--bean-table-border-color);
+}
+
+.bean-table-page:focus {
+  box-shadow: 0 0 0 2px var(--bean-table-focus-color);
+  outline: unset;
+}
+
+.bean-table td:focus {
+  box-shadow: 0 0 0 2px var(--bean-table-focus-color);
+  outline: unset;
+}
+
+.bean-table th:focus {
+  box-shadow: inset 0 0 0 2px var(--bean-table-focus-color);
+  outline: unset;
+}
+
+.bean-table[theme~="row-stripes"] tbody tr:not(.even) {
+  background: var(--bean-table-striped-row-background);
+}
+
+.bean-table tr[theme~="selected"] {
+  background: var(--bean-table-selected-row-background) !important;
+}
+
+/* BeanTable styles for Lumo theme */
+
+.lumo.bean-table thead {
+  background: var(--lumo-contrast-5pct);
+  height: var(--lumo-size-xs);
+}
+
+.lumo.bean-table {
+  --bean-table-padding-s: var(--lumo-space-s);
+  --bean-table-padding-xs: var(--lumo-space-xs);
+  --bean-table-border-color: var(--lumo-contrast-20pct);
+  --bean-table-focus-color: var(--lumo-primary-color-50pct);
+  --bean-table-selected-row-background: var(--lumo-primary-color-10pct);
+  --bean-table-striped-row-background: var(--lumo-contrast-5pct);
+}
+
+.lumo.bean-table td.index {
+  background: var(--lumo-contrast-5pct);
+}
+
+.lumo.bean-table caption {
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+  margin-left: calc(var(--lumo-border-radius-m) / 4);
+}
+
+.lumo.bean-table td.no-data {
+  color: var(--lumo-primary-text-color);
+  font-size: var(--lumo-font-size-l);
+}
+
+.lumo.bean-table td.error-occurred {
+  background: var(--lumo-error-color-10pct);
+  color: var(--lumo-error-text-color);
+  font-size: var(--lumo-font-size-l);
+}
+
+/* BeanTable styles for Aura theme */
+
+.aura.bean-table {
+  --bean-table-padding-s: var(--vaadin-padding-s);
+  --bean-table-padding-xs: var(--vaadin-padding-xs);
+  --bean-table-border-color: var(--vaadin-border-color-secondary);
+  --bean-table-focus-color: var(--vaadin-focus-ring-color);
+  --bean-table-selected-row-background: var(--vaadin-grid-row-selected-background-color);
+  --bean-table-striped-row-background: var(--vaadin-background-container);
+}
+
+.aura.bean-table thead {
+  background: var(--vaadin-background-container);
+  height: var(--vaadin-padding-xs);
+}
+
+.aura.bean-table tbody {
+  background: var(--vaadin-grid-background);
+}
+
+.aura.bean-table td.index {
+  background: var(--vaadin-background-container);
+}
+
+.aura.bean-table caption {
+  color: var(--vaadin-text-color);
+  font-size: var(--aura-base-font-size);
+  margin-left: calc(var(--vaadin-radius-m) / 4);
+}
+
+.aura.bean-table td.no-data {
+  color: var(--aura-blue);
+  font-size: calc(var(--aura-base-font-size) * 1.5);
+}
+
+.aura.bean-table td.error-occurred {
+  color: var(--aura-red);
+  font-size: calc(var(--aura-base-font-size) * 1.5);
+}
+
+.aura.bean-table .menu-button {
+  padding: unset;
+  border: unset;
+}
+
+.aura.bean-table .bean-table-paging > vaadin-button {
+  padding: unset;
+  border: unset;
+}

@@ -30,8 +30,9 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.contextmenu.ContextMenu;
+import com.vaadin.flow.component.contextmenu.ContextMenuPosition;
 import com.vaadin.flow.component.contextmenu.MenuItem;
-import com.vaadin.flow.component.dependency.CssImport;
+import com.vaadin.flow.component.dependency.StyleSheet;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.data.binder.BeanPropertySet;
@@ -61,6 +62,8 @@ import com.vaadin.flow.function.SerializablePredicate;
 import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.shared.Registration;
 
+import tools.jackson.databind.JsonNode;
+
 /**
  * This is a simple Table component backed by DataProvider. The data provider
  * populates the Table with data from the beans. The component has minimal API
@@ -85,12 +88,12 @@ import com.vaadin.flow.shared.Registration;
  */
 
 @SuppressWarnings("serial")
-@CssImport("./styles/bean-table.css")
+@StyleSheet("bean-table.css")
 @Tag("table")
 public class BeanTable<T> extends HtmlComponent
         implements HasListDataView<T, BeanTableListDataView<T>>,
         HasDataView<T, Void, BeanTableDataView<T>>,
-        HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasSize, HasTheme {
+        HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasTheme {
 
     private final KeyMapper<T> keyMapper = new KeyMapper<>(this::getItemId);
     private final AtomicReference<DataProvider<T, ?>> dataProvider = new AtomicReference<>(
@@ -336,6 +339,7 @@ public class BeanTable<T> extends HtmlComponent
          *            String value
          * @return Column for chaining
          */
+        @SuppressWarnings("java:S4274")
         public Column<R> setKey(String key) {
             assert columns.stream().noneMatch(col -> Objects
                     .equals(col.getKey(), key)) : "The key must be unique";
@@ -427,6 +431,7 @@ public class BeanTable<T> extends HtmlComponent
             rowElement = new Element("tr");
             rowElement.setAttribute("role", "row");
             if (getClassNameProvider() != null) {
+                @SuppressWarnings("unchecked")
                 String className = getClassNameProvider().apply((T) item);
                 if (className != null && !className.isEmpty()) {
                     rowElement.getClassList().add(className);
@@ -442,21 +447,18 @@ public class BeanTable<T> extends HtmlComponent
             clickReg.setFilter("event.detail == 1");
             DomListenerRegistration keyReg = rowElement
                     .addEventListener("keydown", event -> {
-                        if (event.getEventData()
-                                .getNumber("event.keyCode") == 32) {
+                        var eventData = event.getEventData();
+                        if (parseKeyCode(eventData) == 32) {
                             toggleSelection();
                             fireEvent(new ItemClickedEvent<>(BeanTable.this,
                                     item, true));
-                        } else if (event.getEventData()
-                                .getNumber("event.keyCode") == 33) {
+                        } else if (parseKeyCode(eventData) == 33) {
                             if (previous != null) {
                                 previous.click();
                             }
-                        } else if (event.getEventData()
-                                .getNumber("event.keyCode") == 34) {
-                            if (next != null) {
-                                next.click();
-                            }
+                        } else if (parseKeyCode(eventData) == 34
+                                && next != null) {
+                            next.click();
                         }
                     });
             keyReg.addEventData("event.keyCode");
@@ -471,6 +473,10 @@ public class BeanTable<T> extends HtmlComponent
                 keyReg.remove();
                 clickReg.remove();
             });
+        }
+
+        private static int parseKeyCode(JsonNode eventData) {
+            return eventData.get("event.keyCode").asInt();
         }
 
         // Package protected for enabling unit testing
@@ -617,6 +623,7 @@ public class BeanTable<T> extends HtmlComponent
         getElement().setAttribute("aria-labelledby", id);
         getElement().appendChild(captionElement);
         menu = new ContextMenu();
+        menu.setPosition(ContextMenuPosition.BOTTOM_END);
         menuButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         menuButton.addClassName("menu-button");
         menuButton.setVisible(false);
@@ -1025,7 +1032,7 @@ public class BeanTable<T> extends HtmlComponent
             div.addClassName("bean-table-paging");
             Div spacer = new Div();
             spacer.addClassName("bean-table-page");
-            if (focusBehavior != focusBehavior.NONE) {
+            if (focusBehavior != FocusBehavior.NONE) {
                 spacer.getElement().setAttribute("tabindex", "-1");
             }
             if (i18n != null && i18n.getPageProvider() != null) {
@@ -1094,8 +1101,7 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     private RowItem<T> createRow(T item) {
-        RowItem<T> rowItem = new RowItem<>(keyMapper.key(item), item);
-        return rowItem;
+        return new RowItem<>(keyMapper.key(item), item);
     }
 
     private void addRow(RowItem<T> rowItem, int index) {
@@ -1226,6 +1232,7 @@ public class BeanTable<T> extends HtmlComponent
         }
     }
 
+    @SuppressWarnings({ "unchecked", "java:S3740" })
     protected T fetchItem(int index) {
         Query query = new Query(index, 1, backEndSorting, inMemorySorting,
                 filter);
@@ -1238,6 +1245,7 @@ public class BeanTable<T> extends HtmlComponent
      * 
      * @return A data provider
      */
+    @SuppressWarnings("java:S1452")
     public DataProvider<T, ?> getDataProvider() {
         return dataProvider.get();
     }
@@ -1258,18 +1266,32 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     @Override
-    public Element getElement() {
-        return super.getElement();
-    }
-
-    @Override
     protected void onAttach(AttachEvent attachEvent) {
         super.onAttach(attachEvent);
         if (getDataProvider() != null
                 && dataProviderListenerRegistration == null) {
             setupDataProviderListener(getDataProvider());
         }
+        detectTheme();
         enableKeyboardNavigation();
+    }
+
+    private void detectTheme() {
+        getElement().executeJs(
+                """
+                        const rootElement = document.documentElement;
+                        const style = getComputedStyle(rootElement);
+                        let theme = "";
+                        theme =
+                            style.getPropertyValue("--vaadin-aura-theme").trim() === "1" ? "aura" : "";
+                        if (theme === "") {
+                            theme =
+                                style.getPropertyValue("--vaadin-lumo-theme").trim() === "1"
+                                    ? "lumo"
+                                    : "";
+                        }
+                        this.classList.add(theme);
+                        """);
     }
 
     @Override
@@ -1568,9 +1590,8 @@ public class BeanTable<T> extends HtmlComponent
      *            theme variants to add
      */
     public void addThemeVariants(BeanTableVariant... variants) {
-        getThemeNames().addAll(
-                Stream.of(variants).map(BeanTableVariant::getVariantName)
-                        .collect(Collectors.toList()));
+        getThemeNames().addAll(Stream.of(variants)
+                .map(BeanTableVariant::getVariantName).toList());
     }
 
     /**
@@ -1580,9 +1601,8 @@ public class BeanTable<T> extends HtmlComponent
      *            theme variants to remove
      */
     public void removeThemeVariants(BeanTableVariant... variants) {
-        getThemeNames().removeAll(
-                Stream.of(variants).map(BeanTableVariant::getVariantName)
-                        .collect(Collectors.toList()));
+        getThemeNames().removeAll(Stream.of(variants)
+                .map(BeanTableVariant::getVariantName).toList());
     }
 
     /**
@@ -1594,17 +1614,21 @@ public class BeanTable<T> extends HtmlComponent
      *            ColumnSelectMenu
      */
     public void setColumnSelectionMenu(ColumnSelectMenu columnSelect) {
-        if (columnSelect == ColumnSelectMenu.BUTTON) {
+        switch (columnSelect) {
+        case BUTTON -> {
             menu.setTarget(menuButton);
             menu.setOpenOnClick(true);
             menuButton.setVisible(true);
-        } else if (columnSelect == ColumnSelectMenu.CONTEXT) {
+        }
+        case CONTEXT -> {
             menu.setTarget(this);
             menu.setOpenOnClick(false);
             menuButton.setVisible(false);
-        } else {
+        }
+        case NONE -> {
             menu.setTarget(null);
             menuButton.setVisible(false);
+        }
         }
     }
 
@@ -1712,7 +1736,7 @@ public class BeanTable<T> extends HtmlComponent
      *            the listener to add.
      * @return a registration for the listener
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public Registration addSelectionChangedListener(
             ComponentEventListener<BeanTableSelectionChangedEvent<T, BeanTable<T>>> listener) {
         return ComponentUtil.addListener(this,
@@ -1727,7 +1751,7 @@ public class BeanTable<T> extends HtmlComponent
      *            the listener to add.
      * @return a registration for the listener
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public Registration addItemClickedListener(
             ComponentEventListener<ItemClickedEvent<T, BeanTable<T>>> listener) {
         return ComponentUtil.addListener(this, ItemClickedEvent.class,

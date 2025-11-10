@@ -3,16 +3,16 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.vaadin.tatu</groupId>
 	<artifactId>beantable</artifactId>
-	<version>3.3.0</version>
+	<version>4.0.0</version>
 	<name>BeanTable</name>
 	<description>Table component for Vaadin platform</description>
 	<properties>
-		<vaadin.version>24.8.2</vaadin.version>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
+		<vaadin.version>25.0.0-beta4</vaadin.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<jetty.version>11.0.14</jetty.version>
+		<jetty.version>12.0.15</jetty.version>
 		<jakarta.validation.version>3.0.2</jakarta.validation.version>
 		<hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
 	</properties>
@@ -54,11 +54,6 @@
 			<id>Vaadin prereleases</id>
 			<url>https://maven.vaadin.com/vaadin-prereleases</url>
 		</repository>
-		<!-- Repository needed for the snapshot versions of Vaadin -->
-		<repository>
-			<id>vaadin-snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/vaadin-snapshots/</url>
-		</repository>
 	</repositories>
 	<pluginRepositories>
 		<pluginRepository>
@@ -72,13 +67,6 @@
 		<pluginRepository>
 			<id>Vaadin prereleases</id>
 			<url>https://maven.vaadin.com/vaadin-prereleases</url>
-		</pluginRepository>
-		<pluginRepository>
-			<id>vaadin-snapshots</id>
-			<url>https://oss.sonatype.org/content/repositories/vaadin-snapshots/</url>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
 		</pluginRepository>
 	</pluginRepositories>
 	<dependencies>
@@ -98,9 +86,15 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>jakarta.servlet</groupId>
 			<artifactId>jakarta.servlet-api</artifactId>
-			<version>5.0.0</version>
+			<version>6.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
@@ -165,17 +159,25 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>org.eclipse.jetty</groupId>
-				<artifactId>jetty-maven-plugin</artifactId>
+				<groupId>org.eclipse.jetty.ee10</groupId>
+				<artifactId>jetty-ee10-maven-plugin</artifactId>
 				<version>${jetty.version}</version>
 				<configuration>
-					<scanIntervalSeconds>3</scanIntervalSeconds>
+	                <stopKey>${project.artifactId}</stopKey>
+    	            <stopPort>8081</stopPort>
+					<scan>3</scan>
 					<!-- Use test scope because the UI/demo classes are in
                             the test package. -->
 					<useTestScope>true</useTestScope>
 					<supportedPackagings>
 						<supportedPackaging>jar</supportedPackaging>
 					</supportedPackagings>
+                    <webApp>
+                        <resourceBases>
+                            <baseResource>${project.basedir}/src/main/resources/META-INF/resources</baseResource>
+                            <baseResource>${project.basedir}/src/test/resources/META-INF/resources</baseResource>
+                        </resourceBases>
+                    </webApp>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -284,11 +286,11 @@
 			<build>
 				<plugins>
 					<plugin>
-						<groupId>org.eclipse.jetty</groupId>
-						<artifactId>jetty-maven-plugin</artifactId>
+						<groupId>org.eclipse.jetty.ee10</groupId>
+						<artifactId>jetty-ee10-maven-plugin</artifactId>
 						<version>${jetty.version}</version>
 						<configuration>
-							<scanIntervalSeconds>0</scanIntervalSeconds>
+							<scan>0</scan>
 							<supportedPackagings>
 								<supportedPackaging>jar</supportedPackaging>
 							</supportedPackagings>

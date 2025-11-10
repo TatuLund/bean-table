@@ -1,6 +1,7 @@
 package org.vaadin.tatu;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,7 +17,6 @@ import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.contextmenu.testbench.ContextMenuElement;
-import com.vaadin.flow.component.contextmenu.testbench.ContextMenuOverlayElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
 import com.vaadin.testbench.screenshot.ImageFileUtil;
 
@@ -36,6 +36,7 @@ public class BeanTableIT extends AbstractViewTest {
 
         // Hide dev mode gizmo, it would interfere screenshot tests
         $("vaadin-dev-tools").first().setProperty("hidden", true);
+        $("copilot-main").first().setProperty("hidden", true);
     }
 
     @Test
@@ -239,14 +240,12 @@ public class BeanTableIT extends AbstractViewTest {
         menu.isOpen();
 
         // Assert that menu has 7 items
-        ContextMenuOverlayElement overlay = $(ContextMenuOverlayElement.class)
-                .first();
-        Assert.assertEquals(7, overlay.getMenuItems().size());
-        overlay.getMenuItems()
+        Assert.assertEquals(7, menu.getMenuItems().size());
+        menu.getMenuItems()
                 .forEach(item -> Assert.assertTrue(item.isChecked()));
 
         // Hide column
-        overlay.getMenuItems().get(2).click();
+        menu.getMenuItems().get(2).click();
         for (int i = 0; i < 20; i++) {
             Assert.assertFalse(table.getCell(i, 3).isDisplayed());
         }
@@ -267,9 +266,9 @@ public class BeanTableIT extends AbstractViewTest {
 
         // Un-hide column
         table.getMenuButton().click();
-        overlay = $(ContextMenuOverlayElement.class).first();
-        Assert.assertFalse(overlay.getMenuItems().get(2).isChecked());
-        overlay.getMenuItems().get(2).click();
+        menu = $(ContextMenuElement.class).first();
+        Assert.assertFalse(menu.getMenuItems().get(2).isChecked());
+        menu.getMenuItems().get(2).click();
         for (int i = 0; i < 20; i++) {
             Assert.assertTrue(table.getCell(i, 3).isDisplayed());
         }
@@ -340,7 +339,7 @@ public class BeanTableIT extends AbstractViewTest {
             variants.deselectAll();
             String fileName = "default.png";
             if (perm.size() > 0) {
-                fileName = perm.stream().map(name -> name.toLowerCase())
+                fileName = perm.stream().map(String::toLowerCase)
                         .collect(Collectors.joining("-")) + ".png";
             }
             for (String name : perm) {
@@ -372,9 +371,6 @@ public class BeanTableIT extends AbstractViewTest {
     }
 
     private void waitASecond() {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-        }
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(1));
     }
 }

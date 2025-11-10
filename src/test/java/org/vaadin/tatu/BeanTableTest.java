@@ -33,6 +33,7 @@ import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.dom.Element;
 import com.vaadin.flow.dom.ThemeList;
+import com.vaadin.flow.function.DeploymentConfiguration;
 import com.vaadin.flow.server.VaadinRequest;
 import com.vaadin.flow.server.VaadinService;
 import com.vaadin.flow.server.VaadinSession;
@@ -471,7 +472,8 @@ public class BeanTableTest {
         div = table.footerElement.getChild(0).getChild(0).getChild(0);
         Assert.assertEquals("Page 3 of 6", div.getChild(2).getText());
 
-        // Test that first item is correct and starting row offset for A11y is
+        // Test that first item is correct and starting row offset for
+        // A11y is
         // correct
         Assert.assertEquals("41",
                 table.bodyElement.getChild(0).getAttribute("aria-rowindex"));
@@ -512,12 +514,14 @@ public class BeanTableTest {
         Assert.assertEquals("643-754-1623",
                 table.bodyElement.getChild(2).getChild(4).getText());
 
-        // Assert that we get the same item as rendered 3rd also from the data
+        // Assert that we get the same item as rendered 3rd also from
+        // the data
         // view
         Person item = dataView.getItem(2);
         Assert.assertEquals("Bentley", item.getFirstName());
 
-        // Lazy data view itself does not support filtering by Query, but we are
+        // Lazy data view itself does not support filtering by Query,
+        // but we are
         // testing that item index provider can be used nevertheless.
         BeanTableLazyDataView<Person> lazyView = table.getLazyDataView();
         lazyView.setItemIndexProvider((i, query) -> personService
@@ -624,8 +628,10 @@ public class BeanTableTest {
             count++;
         });
 
-        // Toggle selection is an internal method to change selection status of
-        // a row. This method is called by both programmatic selection and click
+        // Toggle selection is an internal method to change selection
+        // status of
+        // a row. This method is called by both programmatic selection
+        // and click
         // event hooked to row.
         table.rows.get(0).toggleSelection();
 
@@ -664,7 +670,8 @@ public class BeanTableTest {
         Assert.assertEquals("Two", rows.getChild(1).getChild(1).getText());
         Assert.assertEquals("Three", rows.getChild(2).getChild(1).getText());
 
-        // Change property value from "One" to "Zero" and assert that the change
+        // Change property value from "One" to "Zero" and assert that
+        // the change
         // is reflected to DOM after calling refresh item
         TestItem item = table.getGenericDataView().getItem(0);
         item.setData("Zero");
@@ -674,7 +681,8 @@ public class BeanTableTest {
         ui.remove(table);
         fakeClientCommunication();
 
-        // Data provider listener is un-registered on detach, this refresh item
+        // Data provider listener is un-registered on detach, this
+        // refresh item
         // is not applied
         item = table.getGenericDataView().getItem(0);
         item.setData("NonZero");
@@ -736,7 +744,8 @@ public class BeanTableTest {
         Assert.assertEquals("100px", table.headerElement.getChild(0).getChild(1)
                 .getStyle().get("width"));
 
-        // Assert that classname generator has been applied on the column
+        // Assert that classname generator has been applied on the
+        // column
         Element rows = table.bodyElement;
         Assert.assertEquals(3, rows.getChildCount());
         Assert.assertTrue(
@@ -759,7 +768,8 @@ public class BeanTableTest {
         Assert.assertEquals("right",
                 rows.getChild(2).getChild(1).getStyle().get("text-align"));
 
-        // Change the column header to be component and change the class name
+        // Change the column header to be component and change the class
+        // name
         // provider
         col.setClassNameProvider(item -> "class").setHeader(new Span("Header"));
 
@@ -848,7 +858,8 @@ public class BeanTableTest {
 
         assertSelectedThemeNotSet(table, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
 
-        // Select four items and assert that event was fired once, assert
+        // Select four items and assert that event was fired once,
+        // assert
         // selection
         table.select(items.get(3), items.get(5), items.get(7), items.get(9));
         Assert.assertEquals(1, count);
@@ -905,7 +916,8 @@ public class BeanTableTest {
 
     @Test
     public void errorTable() {
-        // Note, an error and stacktrace will be logged when the test is run,
+        // Note, an error and stacktrace will be logged when the test is
+        // run,
         // that is intentional
         FaultyDataService service = new FaultyDataService();
         BeanTable<DataItem> table = new BeanTable<>(20);
@@ -1106,5 +1118,9 @@ public class BeanTableTest {
         private int closeCount;
 
         private ReentrantLock lock = new ReentrantLock();
+
+        public DeploymentConfiguration getConfiguration() {
+            return null;
+        }
     }
 }
