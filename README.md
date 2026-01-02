@@ -38,6 +38,25 @@ The integration tests are in. These mainly cover some user interaction that cann
 
 ## Release notes
 
+### 4.0.0
+
+- Support Vaadin 25
+- Support themeless, Aura and Lumo theme
+
+### 3.3.0
+
+- Add support for item index provider in BeanTableLazyDataView, used by getItemIndex and getPageIndex methods.
+- Fix tabindex not correctly set in origo (A11y)
+
+### 3.2.0
+
+- Improve keyboard navigation. Keep only the focused cell with tabindex 0, rest will have tabindex -1, this will greatly enhance tabbing experience together with other components.
+
+### 3.1.7
+
+- Fixes addComponentColumn not setting column caption
+- Rerelease 3.1.6 due packaging issue
+
 ### 3.1.4
 
 - Fix A11y metadata update upon programmatic selection
