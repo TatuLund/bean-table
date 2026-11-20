@@ -1,22 +1,20 @@
 package org.vaadin.tatu;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.openqa.selenium.By;
+import org.openqa.selenium.NotFoundException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
+import com.vaadin.testbench.BrowserTestBase;
+import com.vaadin.testbench.DriverSupplier;
 import com.vaadin.testbench.Parameters;
-import com.vaadin.testbench.ScreenshotOnFailureRule;
-import com.vaadin.testbench.TestBench;
-import com.vaadin.testbench.TestBenchTestCase;
+import com.vaadin.testbench.ScreenshotOnFailureExtension;
 
 /**
  * Base class for ITs
@@ -33,20 +31,15 @@ import com.vaadin.testbench.TestBenchTestCase;
  * "https://vaadin.com/docs/v10/testbench/testbench-overview.html">Vaadin
  * TestBench</a>.
  */
-public abstract class AbstractViewTest extends TestBenchTestCase {
+public abstract class AbstractViewTest extends BrowserTestBase
+        implements DriverSupplier {
     private static final int SERVER_PORT = 8080;
-    private static final String WEB_SOCKET_CONNECTION_ERROR_PREFIX = "WebSocket connection to ";
 
     private final String route;
 
-    @Rule
-    public ScreenshotOnFailureRule rule = new ScreenshotOnFailureRule(this,
-            true);
-
-    @BeforeClass
-    public static void setupClass() {
-        WebDriverManager.chromedriver().setup();
-    }
+    @RegisterExtension
+    public ScreenshotOnFailureExtension screenshotOnFailureExtension = new ScreenshotOnFailureExtension(
+            this, true);
 
     public AbstractViewTest() {
         this("");
@@ -102,11 +95,19 @@ public abstract class AbstractViewTest extends TestBenchTestCase {
         return rootUrl;
     }
 
-    @Before
-    public void setup() throws Exception {
+    @Override
+    public ChromeDriver createDriver() {
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");
-        setDriver(TestBench.createDriver(new ChromeDriver(options)));
+        options.addArguments("--headless=new", "--disable-gpu", "--no-sandbox");
+        String[] chromeOptions = Parameters.getChromeOptions();
+        if (chromeOptions != null) {
+            options.addArguments(chromeOptions);
+        }
+        return new ChromeDriver(options);
+    }
+
+    @BeforeEach
+    public void setup() {
         getDriver().get(getURL(route));
 
         // We do screenshot testing, adjust settings to ensure less flakiness
@@ -118,15 +119,25 @@ public abstract class AbstractViewTest extends TestBenchTestCase {
 
         // Wait for frontend compilation complete before testing
         waitForDevServer();
+
+        disableDevTools();
+        disableCopilot();
     }
 
-    public void waitForDevServer() {
-        Object result;
-        do {
-            getCommandExecutor().waitForVaadin();
-            result = getCommandExecutor().executeScript(
-                    "return window.Vaadin && window.Vaadin.Flow && window.Vaadin.Flow.devServerIsNotLoaded;");
-        } while (Boolean.TRUE.equals(result));
+    private void disableDevTools() {
+        try {
+            $("vaadin-dev-tools").first().setProperty("hidden", true);
+        } catch (NotFoundException e) {
+            // Dev tools are not present in every environment.
+        }
+    }
+
+    private void disableCopilot() {
+        try {
+            $("copilot-main").first().setProperty("hidden", true);
+        } catch (NotFoundException e) {
+            // Copilot is not present in every environment.
+        }
     }
 
     /**

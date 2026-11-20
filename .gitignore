@@ -1,2 +1,4 @@
 /target/
 src/main/frontend/generated/
+node_modules
+.pnpm-store/
