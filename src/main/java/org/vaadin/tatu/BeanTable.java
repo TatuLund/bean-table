@@ -10,7 +10,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.LoggerFactory;
@@ -20,7 +19,6 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.DetachEvent;
-import com.vaadin.flow.component.HasSize;
 import com.vaadin.flow.component.HasTheme;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.HtmlComponent;
@@ -60,6 +58,7 @@ import com.vaadin.flow.function.SerializableComparator;
 import com.vaadin.flow.function.SerializableConsumer;
 import com.vaadin.flow.function.SerializablePredicate;
 import com.vaadin.flow.function.ValueProvider;
+import com.vaadin.flow.js.JsSnippets;
 import com.vaadin.flow.shared.Registration;
 
 import tools.jackson.databind.JsonNode;
@@ -95,6 +94,9 @@ public class BeanTable<T> extends HtmlComponent
         HasDataView<T, Void, BeanTableDataView<T>>,
         HasLazyDataView<T, Void, BeanTableLazyDataView<T>>, HasTheme {
 
+    private static final BeanTableEventsJs EVENTS_JS = JsSnippets
+            .of(BeanTableEventsJs.class);
+
     private final KeyMapper<T> keyMapper = new KeyMapper<>(this::getItemId);
     private final AtomicReference<DataProvider<T, ?>> dataProvider = new AtomicReference<>(
             DataProvider.ofItems());
@@ -104,7 +106,6 @@ public class BeanTable<T> extends HtmlComponent
     private Registration dataProviderListenerRegistration;
     private List<Column<T>> columns = new ArrayList<>();
     private boolean htmlAllowed;
-    private Class<T> beanType;
     private PropertySet<T> propertySet;
     int pageLength = -1;
     private int currentPage = 0;
@@ -443,8 +444,8 @@ public class BeanTable<T> extends HtmlComponent
                         fireEvent(new ItemClickedEvent<>(BeanTable.this, item,
                                 true));
                     });
-            clickReg.addEventData("event.detail");
-            clickReg.setFilter("event.detail == 1");
+            clickReg.addEventDataPath("event.detail");
+            clickReg.setFilterExpression(EVENTS_JS.singleClick());
             DomListenerRegistration keyReg = rowElement
                     .addEventListener("keydown", event -> {
                         var eventData = event.getEventData();
@@ -461,10 +462,9 @@ public class BeanTable<T> extends HtmlComponent
                             next.click();
                         }
                     });
-            keyReg.addEventData("event.keyCode");
-            keyReg.addEventData(
-                    "([32, 33, 34].includes(event.keyCode)) ? event.preventDefault() : undefined");
-            keyReg.setFilter("[32, 33, 34].includes(event.keyCode)");
+            keyReg.addEventDataPath("event.keyCode");
+            keyReg.setFilterExpression(EVENTS_JS.selectionOrPagingKey());
+            keyReg.preventDefault();
             if (selected.contains(item)) {
                 rowElement.getThemeList().add("selected");
             }
@@ -633,89 +633,7 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     private void enableKeyboardNavigation() {
-        // Add JavaScript handling of the keyboard navigation
-        bodyElement.executeJs(
-                """
-                        this.addEventListener('click', (e) => {
-                          Array.from(this.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
-                          const cell = e.target;
-                          cell.setAttribute('tabindex','0');
-                        });
-                        this.addEventListener('keydown', (e) => {
-                          if (e.keyCode == 39) {
-                            e.preventDefault();
-                            let cell = document.activeElement;
-                            const previous = cell;
-                            do {
-                              cell = cell.nextSibling;
-                            } while (cell && (cell.style.display === 'none'));
-                            if (cell) {
-                              previous.setAttribute('tabindex','-1');
-                              cell.setAttribute('tabindex','0');
-                              cell.focus();
-                            }
-                          } else if (e.keyCode == 37) {
-                            e.preventDefault();
-                            let cell = document.activeElement;
-                            const previous = cell;
-                            do {
-                              cell = cell.previousSibling;
-                            } while (cell && (cell.style.display === 'none'));
-                            if (cell) {
-                              previous.setAttribute('tabindex','-1');
-                              cell.setAttribute('tabindex','0');
-                              cell.focus();
-                            }
-                          } else if (e.keyCode == 36) {
-                            e.preventDefault();
-                            let row = document.activeElement.closest('tr');
-                            let col=1;
-                            const previous = row.cells[col];
-                            while (col < row.cells.length-1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {
-                              col++;
-                            }
-                            if (row) {
-                              previous.setAttribute('tabindex','-1');
-                              row.cells[col].setAttribute('tabindex','0');
-                              row.cells[col].focus();
-                            }
-                          } else if (e.keyCode == 35) {
-                            e.preventDefault();
-                            let row = document.activeElement.closest('tr');
-                            let col=row.cells.length-1;
-                            const previous = row.cells[col];
-                            while (col > 1 && row.cells[col].style.display && row.cells[col].style.display === 'none') {
-                              col--;
-                            }
-                            if (row) {
-                              previous.setAttribute('tabindex','-1');
-                              row.cells[col].setAttribute('tabindex','0');
-                              row.cells[col].focus();
-                            }
-                          } else if (e.keyCode == 40) {
-                            e.preventDefault();
-                            let col = document.activeElement.cellIndex;
-                            let rowIndex = document.activeElement.closest('tr').rowIndex;
-                            let row = this.rows[rowIndex];
-                            const previous = this.rows[rowIndex-1].cells[col];
-                            if (row) {
-                              previous.setAttribute('tabindex','-1');
-                              row.cells[col].setAttribute('tabindex','0');
-                              row.cells[col].focus();
-                            }
-                          } else if (e.keyCode == 38) {
-                            e.preventDefault();
-                            let col = document.activeElement.cellIndex;
-                            let rowIndex = document.activeElement.closest('tr').rowIndex;
-                            let row = this.rows[rowIndex - 2];
-                            const previous = this.rows[rowIndex-1].cells[col];
-                            if (row) {
-                              previous.setAttribute('tabindex','-1');
-                              row.cells[col].setAttribute('tabindex','0');
-                              row.cells[col].focus();
-                            }
-                          }
-                        })""");
+        bodyElement.executeJs(BeanTableJs.class).enableKeyboardNavigation();
     }
 
     /**
@@ -772,7 +690,6 @@ public class BeanTable<T> extends HtmlComponent
     public BeanTable(Class<T> beanType, boolean autoCreateColumns) {
         this();
         Objects.requireNonNull(beanType, "Bean type can't be null");
-        this.beanType = beanType;
         propertySet = BeanPropertySet.get(beanType);
         if (autoCreateColumns) {
             propertySet.getProperties()
@@ -1277,21 +1194,7 @@ public class BeanTable<T> extends HtmlComponent
     }
 
     private void detectTheme() {
-        getElement().executeJs(
-                """
-                        const rootElement = document.documentElement;
-                        const style = getComputedStyle(rootElement);
-                        let theme = "";
-                        theme =
-                            style.getPropertyValue("--vaadin-aura-theme").trim() === "1" ? "aura" : "";
-                        if (theme === "") {
-                            theme =
-                                style.getPropertyValue("--vaadin-lumo-theme").trim() === "1"
-                                    ? "lumo"
-                                    : "";
-                        }
-                        this.classList.add(theme);
-                        """);
+        getElement().executeJs(BeanTableJs.class).detectTheme();
     }
 
     @Override
@@ -1543,22 +1446,7 @@ public class BeanTable<T> extends HtmlComponent
     public void focus(int row, int col) {
         if (focusBehavior != FocusBehavior.NONE) {
             col++;
-            bodyElement.executeJs(
-                    """
-                            setTimeout(function(){
-                              Array.from($0.rows).forEach(row => Array.from(row.cells).forEach(cell => cell.setAttribute('tabindex','-1')));
-                              let row = $0.rows[$1];
-                              if (row) {
-                                let cell = row.cells[$2];
-                                if (cell) {
-                                  cell.setAttribute('tabindex','0');
-                                  cell.click();
-                                  cell.focus()
-                                }
-                              }
-                            }, 0);
-                                    """,
-                    bodyElement, row, col);
+            bodyElement.executeJs(BeanTableJs.class).focus(row, col);
         }
     }
 

@@ -38,6 +38,12 @@ The integration tests are in. These mainly cover some user interaction that cann
 
 ## Release notes
 
+### 4.1.0
+
+- Support Vaadin 25.4 strict CSP using `@JsDefinition` and `@JsExpression`
+  interfaces for keyboard navigation, focus handling, theme detection and event
+  filters, without changing keyboard behavior.
+
 ### 4.0.0
 
 - Support Vaadin 25

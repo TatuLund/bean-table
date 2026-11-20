@@ -3,13 +3,9 @@ package org.vaadin.tatu;
 import java.util.Optional;
 
 import com.vaadin.flow.component.ComponentUtil;
-import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.data.provider.AbstractDataView;
 import com.vaadin.flow.data.provider.BackEndDataProvider;
-import com.vaadin.flow.data.provider.CallbackDataProvider;
-import com.vaadin.flow.data.provider.ConfigurableFilterDataProvider;
 import com.vaadin.flow.data.provider.DataProvider;
-import com.vaadin.flow.data.provider.DataProviderWrapper;
 import com.vaadin.flow.data.provider.ItemIndexProvider;
 import com.vaadin.flow.data.provider.LazyDataView;
 import com.vaadin.flow.data.provider.Query;
